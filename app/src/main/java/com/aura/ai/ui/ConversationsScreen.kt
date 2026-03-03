@@ -74,6 +74,7 @@ fun ConversationsScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationItem(
     conversation: Conversation,
