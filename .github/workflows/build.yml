@@ -1,44 +1,33 @@
-name: Build Aura AI
+name: Build AuraAI APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-      
-      - name: Build with Gradle
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
         run: ./gradlew assembleDebug
-      
-      - name: Upload entire build folder
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
-          path: app/build/outputs/
-      
-      - name: Find and rename APK
-        run: |
-          APK=$(find app/build/outputs -name "*.apk" | head -1)
-          if [ -n "$APK" ]; then
-            echo "Found APK: $APK"
-            cp "$APK" app-debug.apk
-          fi
-      
-      - name: Upload specific APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: aura-ai-debug
-          path: app-debug.apk
-          if-no-files-found: ignore
+          name: AuraAI-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
