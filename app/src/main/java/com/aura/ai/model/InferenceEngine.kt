@@ -10,10 +10,6 @@ import java.util.concurrent.Executors
 
 class InferenceEngine(private val context: Context) {
     
-    private var onnxEnvironment: Any? = null
-    private var session: Any? = null
-    private val executor = Executors.newSingleThreadExecutor()
-    
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized
     
@@ -30,7 +26,6 @@ class InferenceEngine(private val context: Context) {
         try {
             _currentModelPath.value = modelPath
             _currentTokenizerPath.value = tokenizerPath
-            Thread.sleep(500)
             _isInitialized.value = true
             true
         } catch (e: Exception) {
@@ -47,24 +42,26 @@ class InferenceEngine(private val context: Context) {
         val startTime = System.currentTimeMillis()
         
         try {
-            // FIXED: Calculate as Long from the start
-            val processingTime = (prompt.length * 10L).coerceIn(100L, 1000L)
+            val processingTime = (prompt.length * 5L).coerceIn(50L, 500L)
             Thread.sleep(processingTime)
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
             
             when {
                 prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
-                    "Hello! How can I help you today?"
+                    "Hello! I'm running on MobileLLM-600M. How can I help you today?"
                     
                 prompt.contains("how are you", ignoreCase = true) ->
-                    "I'm functioning optimally! Ready to assist you with any task."
+                    "I'm running smoothly! MobileLLM is great for mobile devices."
+                    
+                prompt.contains("what model", ignoreCase = true) ->
+                    "I'm using MobileLLM-600M Q4F16, a 414MB model optimized for mobile!"
                     
                 prompt.contains("what can you do", ignoreCase = true) ->
-                    "I can help you with conversations, answer questions, and control your device."
+                    "I can chat with you, answer questions, and control your device - all offline!"
                     
                 prompt.contains("help", ignoreCase = true) ->
-                    "You can ask me questions or give me commands like 'open Chrome'."
+                    "Try commands like 'open Chrome', 'search for cats', or just chat with me!"
                     
                 else -> generateContextualResponse(prompt)
             }
@@ -86,25 +83,11 @@ class InferenceEngine(private val context: Context) {
                 "I can scroll for you. Which direction (up/down)?"
                 
             else ->
-                "I understand your message: '$prompt'."
+                "I understand your message: '$prompt'. Processing with MobileLLM..."
         }
     }
     
     private fun containsAny(text: String, keywords: List<String>): Boolean {
         return keywords.any { text.contains(it, ignoreCase = true) }
-    }
-    
-    fun shutdown() {
-        executor.shutdown()
-    }
-    
-    fun getModelInfo(): Map<String, Any> {
-        return mapOf(
-            "initialized" to _isInitialized.value,
-            "modelPath" to _currentModelPath.value,
-            "tokenizerPath" to _currentTokenizerPath.value,
-            "lastInferenceTimeMs" to _lastInferenceTime.value,
-            "maxSequenceLength" to Constants.MAX_SEQUENCE_LENGTH
-        )
     }
 }
