@@ -1,6 +1,7 @@
 package com.aura.ai.model
 
 import android.content.Context
+import android.util.Log
 import com.aura.ai.utils.FileHelper
 import com.aura.ai.utils.Constants
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,8 @@ class ModelManager(private val context: Context) {
         val modelsDir = FileHelper.getModelsDirectory(context)
         val tokenizerDir = FileHelper.getTokenizerDirectory(context)
         
+        Log.d("ModelManager", "Scanning for model in: ${modelsDir.absolutePath}")
+        
         val modelFile = File(modelsDir, Constants.MODEL_FILENAME)
         val tokenizerFile = File(tokenizerDir, Constants.TOKENIZER_FILENAME)
         
@@ -35,37 +38,10 @@ class ModelManager(private val context: Context) {
             _tokenizerPath.value = tokenizerFile.absolutePath
             _modelSize.value = modelFile.length()
             _isModelLoaded.value = true
+            Log.d("ModelManager", "Model found! Size: ${modelFile.length() / (1024*1024)} MB")
             true
         } else {
-            false
-        }
-    }
-    
-    suspend fun loadModel(modelFile: File, tokenizerFile: File): Boolean = withContext(Dispatchers.IO) {
-        try {
-            // Validate files
-            if (!modelFile.exists() || !tokenizerFile.exists()) {
-                return@withContext false
-            }
-            
-            // Copy to Aura directory
-            val modelsDir = FileHelper.getModelsDirectory(context)
-            val tokenizerDir = FileHelper.getTokenizerDirectory(context)
-            
-            val destModel = File(modelsDir, Constants.MODEL_FILENAME)
-            val destTokenizer = File(tokenizerDir, Constants.TOKENIZER_FILENAME)
-            
-            modelFile.copyTo(destModel, overwrite = true)
-            tokenizerFile.copyTo(destTokenizer, overwrite = true)
-            
-            _modelPath.value = destModel.absolutePath
-            _tokenizerPath.value = destTokenizer.absolutePath
-            _modelSize.value = destModel.length()
-            _isModelLoaded.value = true
-            
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
+            Log.d("ModelManager", "Model not found")
             false
         }
     }
