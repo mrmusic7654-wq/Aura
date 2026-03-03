@@ -1,1 +1,48 @@
-
+<resources>
+    <string name="app_name">Aura AI</string>
+    <string name="accessibility_service_description">Allows Aura AI to control your device for automation tasks like scrolling, clicking, and navigation</string>
+    
+    <!-- Model Setup -->
+    <string name="model_setup_title">Setup Aura AI</string>
+    <string name="model_setup_instruction">Please place your Qwen model files in:</string>
+    <string name="model_file_name">Model file: qwen-3-0.6b.onnx</string>
+    <string name="tokenizer_file_name">Tokenizer file: tokenizer.json</string>
+    <string name="scan_for_model">Scan for Model</string>
+    <string name="continue_to_chat">Continue to Chat</string>
+    <string name="model_found">Model found! Loading...</string>
+    <string name="model_not_found">Model files not found. Please place them in the directory above.</string>
+    
+    <!-- Chat -->
+    <string name="type_message">Type a message or command...</string>
+    <string name="send">Send</string>
+    <string name="settings">Settings</string>
+    <string name="aura_typing">Aura is typing...</string>
+    
+    <!-- Settings -->
+    <string name="model_information">Model Information</string>
+    <string name="model_path">Model Path:</string>
+    <string name="model_ready">Model Ready:</string>
+    <string name="automation_settings">Automation Settings</string>
+    <string name="accessibility_service">Accessibility Service</string>
+    <string name="accessibility_description">Enable accessibility service to allow Aura to control your device</string>
+    <string name="storage">Storage</string>
+    <string name="chat_history">Chat History: Stored locally</string>
+    <string name="clear_history">Clear All Chat History</string>
+    <string name="back">Back</string>
+    <string name="danger_zone">Danger Zone</string>
+    
+    <!-- Conversations -->
+    <string name="conversations">Conversations</string>
+    <string name="no_conversations">No conversations yet</string>
+    <string name="delete">Delete</string>
+    
+    <!-- Commands -->
+    <string name="command_open">Opening %s</string>
+    <string name="command_app_not_found">Could not find app: %s</string>
+    <string name="command_specify_app">Please specify which app to open</string>
+    <string name="command_scrolling">Scrolling %s</string>
+    <string name="command_specify_direction">Please specify scroll direction (up/down/left/right)</string>
+    <string name="command_searching">Searching for: %s</string>
+    <string name="command_enable_accessibility">Please enable accessibility service in settings</string>
+    <string name="command_executed">✓ Command executed</string>
+</resources>
