@@ -5,15 +5,13 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -21,47 +19,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      
-      - name: Grant execute permission
-        run: chmod +x gradlew
-      
       - name: Build with Gradle
         run: ./gradlew assembleDebug
       
-      - name: 🔍 Find and Upload APK
-        run: |
-          echo "Searching for APK..."
-          
-          # Try multiple possible locations
-          LOCATIONS=(
-            "app/build/outputs/apk/debug/app-debug.apk"
-            "app/build/outputs/apk/debug/*.apk"
-            "app/build/outputs/apk/*/app-*.apk"
-            "**/*.apk"
-          )
-          
-          for pattern in "${LOCATIONS[@]}"; do
-            for file in $pattern; do
-              if [ -f "$file" ]; then
-                echo "✅ Found APK at: $file"
-                echo "apk_path=$file" >> $GITHUB_ENV
-                break 2
-              fi
-            done
-          done
-          
-          if [ -z "$apk_path" ]; then
-            echo "❌ No APK found!"
-            echo "📁 Directory structure:"
-            find app/build/outputs -type f 2>/dev/null || echo "No build outputs"
-            exit 1
-          fi
-      
-      - name: Upload APK
+      - name: Upload entire build folder
         uses: actions/upload-artifact@v4
         with:
-          name: aura-ai-app
-          path: ${{ env.apk_path }}
-          if-no-files-found: error
+          name: build-output
+          path: app/build/outputs/
+      
+      - name: Find and rename APK
+        run: |
+          APK=$(find app/build/outputs -name "*.apk" | head -1)
+          if [ -n "$APK" ]; then
+            echo "Found APK: $APK"
+            cp "$APK" app-debug.apk
+          fi
+      
+      - name: Upload specific APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-ai-debug
+          path: app-debug.apk
+          if-no-files-found: ignore
