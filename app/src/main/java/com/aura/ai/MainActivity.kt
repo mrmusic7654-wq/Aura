@@ -38,12 +38,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Create Aura directory on first launch
         lifecycleScope.launch {
             FileHelper.createAuraDirectory(this@MainActivity)
         }
         
-        // Request permissions
         permissionHelper.requestPermissions(requestPermissionLauncher)
         
         setContent {
@@ -77,7 +75,7 @@ fun AuraApp() {
         composable("splash") {
             SplashScreen(
                 onTimeout = {
-                    val context = LocalContext.current
+                    // FIXED: Use the outer context, don't create new one
                     if (FileHelper.isModelReady(context)) {
                         navController.navigate("chat") {
                             popUpTo("splash") { inclusive = true }
