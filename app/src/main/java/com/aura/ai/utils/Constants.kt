@@ -10,12 +10,13 @@ object Constants {
     const val CHAT_HISTORY_FILE = "chat_history.json"
     const val EXPORT_DIR = "exports"
     
-    const val MODEL_FILENAME = "qwen-3-0.6b.onnx"
+    // UPDATED: MobileLLM-600M model files
+    const val MODEL_FILENAME = "model_q4f16.onnx"  // Make sure this matches EXACTLY
     const val TOKENIZER_FILENAME = "tokenizer.json"
     const val CONFIG_FILENAME = "model_config.json"
     
-    // Model configuration
-    const val MAX_SEQUENCE_LENGTH = 512
+    // Model configuration for MobileLLM
+    const val MAX_SEQUENCE_LENGTH = 1024
     const val MAX_BATCH_SIZE = 1
     const val TEMPERATURE = 0.7f
     const val TOP_P = 0.9f
@@ -35,7 +36,7 @@ object Constants {
     val BACK_COMMANDS = listOf("back", "go back", "previous")
     val HOME_COMMANDS = listOf("home", "go home", "main screen")
     
-    // Intent categories for app detection
+    // Common app packages
     val COMMON_APP_PACKAGES = mapOf(
         "chrome" to "com.android.chrome",
         "youtube" to "com.google.android.youtube",
