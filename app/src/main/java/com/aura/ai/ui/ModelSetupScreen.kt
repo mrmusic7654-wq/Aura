@@ -23,9 +23,9 @@ fun ModelSetupScreen(
     var isScanning by remember { mutableStateOf(false) }
     var isModelReady by remember { mutableStateOf(FileHelper.isModelReady(context)) }
     var statusMessage by remember { mutableStateOf("") }
+    val externalPath = remember { FileHelper.getExternalDisplayPath(context) }
     
     LaunchedEffect(Unit) {
-        // Check if model already exists
         isModelReady = FileHelper.isModelReady(context)
         if (isModelReady) {
             onModelLoaded()
@@ -44,37 +44,64 @@ fun ModelSetupScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            "Powered by MobileLLM-600M",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Please place your Qwen model files in:",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            "Please place your model files in:",
+            style = MaterialTheme.typography.bodyLarge
         )
         
         Spacer(modifier = Modifier.height(8.dp))
         
         Card(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
         ) {
             Text(
-                text = FileHelper.getModelsDirectory(context).absolutePath,
+                text = externalPath,
                 modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
-        Text(
-            text = "Model file: ${Constants.MODEL_FILENAME}",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        
-        Text(
-            text = "Tokenizer file: ${Constants.TOKENIZER_FILENAME}",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    "Required Files:",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "• Model: ${Constants.MODEL_FILENAME} (414MB)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "• Tokenizer: ${Constants.TOKENIZER_FILENAME}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "• Place in: /models/ and /tokenizer/ folders",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.height(24.dp))
         
@@ -94,10 +121,10 @@ fun ModelSetupScreen(
                     
                     val modelReady = FileHelper.isModelReady(context)
                     if (modelReady) {
-                        statusMessage = "Model found! Loading..."
+                        statusMessage = "✅ Model found! Loading..."
                         onModelLoaded()
                     } else {
-                        statusMessage = "Model files not found. Please place them in the directory above."
+                        statusMessage = "❌ Model files not found. Please place them in the directory above."
                     }
                     
                     isScanning = false
@@ -110,7 +137,6 @@ fun ModelSetupScreen(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Show continue button if model is ready
         if (isModelReady) {
             Button(
                 onClick = onModelLoaded,
