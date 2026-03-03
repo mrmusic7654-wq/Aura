@@ -2,7 +2,6 @@ package com.aura.ai.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
@@ -17,6 +16,7 @@ import com.aura.ai.AuraApplication
 import com.aura.ai.automation.AuraAccessibilityService
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.launch
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 
@@ -199,7 +199,6 @@ fun SettingsScreen(
                             onClick = {
                                 scope.launch {
                                     // Clear all conversations
-                                    // Implement clear all functionality
                                 }
                             },
                             modifier = Modifier.fillMaxWidth(),
