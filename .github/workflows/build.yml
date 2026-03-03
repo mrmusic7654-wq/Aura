@@ -27,63 +27,41 @@ jobs:
       - name: Grant execute permission
         run: chmod +x gradlew
       
-      - name: 🔍 DEBUG - List all files
-        run: |
-          echo "=== CURRENT DIRECTORY STRUCTURE ==="
-          pwd
-          ls -la
-          echo ""
-          echo "=== GRADLE FILES ==="
-          find . -name "*.gradle*" -type f
-          echo ""
-          echo "=== KOTLIN FILES ==="
-          find . -name "*.kt" -type f | head -20
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug
       
-      - name: 🔧 Check gradle wrapper
+      - name: 🔍 Find and Upload APK
         run: |
-          echo "=== GRADLE WRAPPER ==="
-          if [ -f "gradlew" ]; then
-            echo "✅ gradlew exists"
-            file gradlew
-          else
-            echo "❌ gradlew MISSING!"
-          fi
+          echo "Searching for APK..."
           
-          if [ -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "✅ gradle-wrapper.jar exists"
-          else
-            echo "❌ gradle-wrapper.jar MISSING!"
-          fi
+          # Try multiple possible locations
+          LOCATIONS=(
+            "app/build/outputs/apk/debug/app-debug.apk"
+            "app/build/outputs/apk/debug/*.apk"
+            "app/build/outputs/apk/*/app-*.apk"
+            "**/*.apk"
+          )
           
-          if [ -f "gradle/wrapper/gradle-wrapper.properties" ]; then
-            echo "✅ gradle-wrapper.properties exists"
-            cat gradle/wrapper/gradle-wrapper.properties
-          else
-            echo "❌ gradle-wrapper.properties MISSING!"
+          for pattern in "${LOCATIONS[@]}"; do
+            for file in $pattern; do
+              if [ -f "$file" ]; then
+                echo "✅ Found APK at: $file"
+                echo "apk_path=$file" >> $GITHUB_ENV
+                break 2
+              fi
+            done
+          done
+          
+          if [ -z "$apk_path" ]; then
+            echo "❌ No APK found!"
+            echo "📁 Directory structure:"
+            find app/build/outputs -type f 2>/dev/null || echo "No build outputs"
+            exit 1
           fi
       
-      - name: 🔨 Try to build
-        run: |
-          echo "=== ATTEMPTING BUILD ==="
-          ./gradlew tasks --dry-run || echo "❌ Gradle failed"
-          echo ""
-          echo "=== BUILDING DEBUG ==="
-          ./gradlew assembleDebug --stacktrace || echo "❌ Build failed"
-      
-      - name: 📦 Find APK
-        run: |
-          echo "=== SEARCHING FOR APK ==="
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
-          echo ""
-          echo "=== CHECK BUILD OUTPUT ==="
-          ls -la app/build/outputs/ 2>/dev/null || echo "No build outputs"
-      
-      - name: 📤 Upload any APK found
-        if: success() || failure()
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: build-logs
-          path: |
-            app/build/reports/
-            ./*.log
-            ~/.gradle/wrapper/dists/*/gradle*.log
+          name: aura-ai-app
+          path: ${{ env.apk_path }}
+          if-no-files-found: error
