@@ -7,6 +7,8 @@ import com.aura.ai.data.ChatMessage
 import com.aura.ai.data.Conversation
 import com.aura.ai.model.InferenceEngine
 import com.aura.ai.automation.CommandExecutor
+import com.aura.ai.automation.AuraAccessibilityService
+import com.aura.ai.utils.Constants
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -19,7 +21,7 @@ class MainViewModel(
     private val commandExecutor = CommandExecutor(
         app, 
         app.deviceController,
-        null // Will be set when service connects
+        null
     )
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -47,7 +49,6 @@ class MainViewModel(
     
     fun sendMessage(content: String) {
         viewModelScope.launch {
-            // Save user message
             val userMessage = ChatMessage(
                 conversationId = currentConversationId,
                 content = content,
@@ -55,20 +56,16 @@ class MainViewModel(
             )
             chatDao.insertMessage(userMessage)
             
-            // Show typing indicator
             _isTyping.value = true
             
-            // Check if it's a command
             val isCommand = isCommand(content)
             
-            // Generate response
             val response = if (isCommand) {
                 commandExecutor.executeCommand(content)
             } else {
                 inferenceEngine.generateResponse(content)
             }
             
-            // Save AI response
             val aiMessage = ChatMessage(
                 conversationId = currentConversationId,
                 content = response,
@@ -78,7 +75,6 @@ class MainViewModel(
             )
             chatDao.insertMessage(aiMessage)
             
-            // Update conversation title if first message
             if (_messages.value.size <= 2) {
                 val newTitle = content.take(30) + if (content.length > 30) "..." else ""
                 chatDao.getConversation(currentConversationId)?.let { conv ->
