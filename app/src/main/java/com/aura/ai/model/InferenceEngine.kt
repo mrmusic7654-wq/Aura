@@ -2,12 +2,10 @@ package com.aura.ai.model
 
 import android.content.Context
 import com.aura.ai.utils.Constants
-import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.util.concurrent.Executors
 
 class InferenceEngine(private val context: Context) {
@@ -34,13 +32,6 @@ class InferenceEngine(private val context: Context) {
             _currentTokenizerPath.value = tokenizerPath
             
             // TODO: Initialize actual ONNX Runtime
-            // This is where you would:
-            // 1. Load ONNX Runtime
-            // 2. Create inference session
-            // 3. Load tokenizer
-            // 4. Warm up the model
-            
-            // Simulate loading time
             Thread.sleep(500)
             
             _isInitialized.value = true
@@ -59,20 +50,12 @@ class InferenceEngine(private val context: Context) {
         val startTime = System.currentTimeMillis()
         
         try {
-            // TODO: Actual inference with Qwen model
-            // This would:
-            // 1. Tokenize input
-            // 2. Run inference
-            // 3. Detokenize output
-            // 4. Post-process
-            
-            // Simulate processing time based on prompt length
-            val processingTime = (prompt.length * 10).coerceIn(100, 1000)
+            // FIXED: Changed coerceIn values to Long
+            val processingTime = (prompt.length * 10).coerceIn(100L, 1000L)
             Thread.sleep(processingTime)
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
             
-            // Enhanced placeholder responses
             when {
                 prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
                     "Hello! How can I help you today?"
@@ -81,16 +64,16 @@ class InferenceEngine(private val context: Context) {
                     "I'm functioning optimally! Ready to assist you with any task."
                     
                 prompt.contains("what can you do", ignoreCase = true) ->
-                    "I can help you with conversations, answer questions, and control your device - like opening apps, searching the web, scrolling, and more!"
+                    "I can help you with conversations, answer questions, and control your device."
                     
                 prompt.contains("help", ignoreCase = true) ->
-                    "You can ask me questions, give me commands like 'open Chrome' or 'search for cats', or just chat with me!"
+                    "You can ask me questions or give me commands like 'open Chrome'."
                     
                 else -> generateContextualResponse(prompt)
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            "I encountered an error while processing your request. Please try again."
+            "I encountered an error while processing your request."
         }
     }
     
@@ -106,7 +89,7 @@ class InferenceEngine(private val context: Context) {
                 "I can scroll for you. Which direction (up/down)?"
                 
             else ->
-                "I understand your message: '$prompt'. I'm processing it with my local AI model."
+                "I understand your message: '$prompt'."
         }
     }
     
@@ -116,7 +99,6 @@ class InferenceEngine(private val context: Context) {
     
     fun shutdown() {
         executor.shutdown()
-        // TODO: Clean up ONNX session
     }
     
     fun getModelInfo(): Map<String, Any> {
