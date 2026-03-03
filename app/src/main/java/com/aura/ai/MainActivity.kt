@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -62,10 +63,9 @@ class MainActivity : ComponentActivity() {
 fun AuraApp() {
     val navController = rememberNavController()
     var startDestination by remember { mutableStateOf("splash") }
+    val context = LocalContext.current
     
     LaunchedEffect(Unit) {
-        // Check if model is ready
-        val context = androidx.compose.ui.platform.LocalContext.current
         val isModelReady = FileHelper.isModelReady(context)
         startDestination = if (isModelReady) "chat" else "model_setup"
     }
@@ -77,7 +77,7 @@ fun AuraApp() {
         composable("splash") {
             SplashScreen(
                 onTimeout = {
-                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val context = LocalContext.current
                     if (FileHelper.isModelReady(context)) {
                         navController.navigate("chat") {
                             popUpTo("splash") { inclusive = true }
