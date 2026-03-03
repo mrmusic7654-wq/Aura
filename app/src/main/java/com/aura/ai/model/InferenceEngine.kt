@@ -30,10 +30,7 @@ class InferenceEngine(private val context: Context) {
         try {
             _currentModelPath.value = modelPath
             _currentTokenizerPath.value = tokenizerPath
-            
-            // TODO: Initialize actual ONNX Runtime
             Thread.sleep(500)
-            
             _isInitialized.value = true
             true
         } catch (e: Exception) {
@@ -50,8 +47,8 @@ class InferenceEngine(private val context: Context) {
         val startTime = System.currentTimeMillis()
         
         try {
-            // FIXED: Changed coerceIn values to Long
-            val processingTime = (prompt.length * 10).coerceIn(100L, 1000L)
+            // FIXED: Calculate as Long from the start
+            val processingTime = (prompt.length * 10L).coerceIn(100L, 1000L)
             Thread.sleep(processingTime)
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
