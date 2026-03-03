@@ -1,12 +1,14 @@
 package com.aura.ai.utils
 
 import android.content.Context
+import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.security.MessageDigest
 
 object FileHelper {
+    private const val TAG = "FileHelper"
     
     fun getAuraDirectory(context: Context): File {
         return File(context.getExternalFilesDir(null), Constants.AURA_DIR)
@@ -24,16 +26,17 @@ object FileHelper {
         return File(getAuraDirectory(context), Constants.EXPORT_DIR)
     }
     
-    fun getChatHistoryFile(context: Context): File {
-        return File(getAuraDirectory(context), Constants.CHAT_HISTORY_FILE)
-    }
-    
     fun createAuraDirectory(context: Context): Boolean {
         return try {
             val auraDir = getAuraDirectory(context)
             val modelsDir = getModelsDirectory(context)
             val tokenizerDir = getTokenizerDirectory(context)
             val exportsDir = getExportsDirectory(context)
+            
+            Log.d(TAG, "Creating directories:")
+            Log.d(TAG, "Aura dir: ${auraDir.absolutePath}")
+            Log.d(TAG, "Models dir: ${modelsDir.absolutePath}")
+            Log.d(TAG, "Tokenizer dir: ${tokenizerDir.absolutePath}")
             
             if (!auraDir.exists()) auraDir.mkdirs()
             if (!modelsDir.exists()) modelsDir.mkdirs()
@@ -42,15 +45,50 @@ object FileHelper {
             
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Error creating directories", e)
             false
         }
     }
     
     fun isModelReady(context: Context): Boolean {
-        val modelFile = File(getModelsDirectory(context), Constants.MODEL_FILENAME)
-        val tokenizerFile = File(getTokenizerDirectory(context), Constants.TOKENIZER_FILENAME)
-        return modelFile.exists() && tokenizerFile.exists() && modelFile.length() > 0 && tokenizerFile.length() > 0
+        val modelsDir = getModelsDirectory(context)
+        val tokenizerDir = getTokenizerDirectory(context)
+        
+        Log.d(TAG, "Checking model in: ${modelsDir.absolutePath}")
+        Log.d(TAG, "Checking tokenizer in: ${tokenizerDir.absolutePath}")
+        
+        if (modelsDir.exists()) {
+            val modelFiles = modelsDir.listFiles()
+            Log.d(TAG, "Files in models dir: ${modelFiles?.joinToString { it.name }}")
+        } else {
+            Log.d(TAG, "Models directory does not exist!")
+            createAuraDirectory(context)
+        }
+        
+        if (tokenizerDir.exists()) {
+            val tokenizerFiles = tokenizerDir.listFiles()
+            Log.d(TAG, "Files in tokenizer dir: ${tokenizerFiles?.joinToString { it.name }}")
+        } else {
+            Log.d(TAG, "Tokenizer directory does not exist!")
+        }
+        
+        val modelFile = File(modelsDir, Constants.MODEL_FILENAME)
+        val tokenizerFile = File(tokenizerDir, Constants.TOKENIZER_FILENAME)
+        
+        val modelExists = modelFile.exists()
+        val tokenizerExists = tokenizerFile.exists()
+        val modelValid = modelExists && modelFile.length() > 0
+        val tokenizerValid = tokenizerExists && tokenizerFile.length() > 0
+        
+        Log.d(TAG, "Model exists: $modelExists, size: ${if(modelExists) modelFile.length() else 0} bytes")
+        Log.d(TAG, "Tokenizer exists: $tokenizerExists, size: ${if(tokenizerExists) tokenizerFile.length() else 0} bytes")
+        Log.d(TAG, "Model ready: ${modelValid && tokenizerValid}")
+        
+        return modelValid && tokenizerValid
+    }
+    
+    fun getExternalDisplayPath(context: Context): String {
+        return "/storage/emulated/0/Android/data/${context.packageName}/files/${Constants.AURA_DIR}"
     }
     
     fun getModelFileSize(context: Context): Long {
@@ -63,60 +101,7 @@ object FileHelper {
         return if (tokenizerFile.exists()) tokenizerFile.length() else 0
     }
     
-    fun copyFile(source: File, destination: File): Boolean {
-        return try {
-            FileInputStream(source).use { input ->
-                FileOutputStream(destination).use { output ->
-                    input.copyTo(output)
-                }
-            }
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-    
-    fun calculateMD5(file: File): String {
-        return try {
-            val md = MessageDigest.getInstance("MD5")
-            FileInputStream(file).use { input ->
-                val buffer = ByteArray(8192)
-                var read: Int
-                while (input.read(buffer).also { read = it } > 0) {
-                    md.update(buffer, 0, read)
-                }
-            }
-            md.digest().joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            ""
-        }
-    }
-    
     fun getFreeSpace(context: Context): Long {
         return getAuraDirectory(context).freeSpace
-    }
-    
-    fun isSpaceSufficient(context: Context, requiredBytes: Long): Boolean {
-        return getFreeSpace(context) > requiredBytes
-    }
-    
-    fun listModelFiles(context: Context): List<File> {
-        val modelsDir = getModelsDirectory(context)
-        return if (modelsDir.exists()) {
-            modelsDir.listFiles()?.filter { it.isFile } ?: emptyList()
-        } else {
-            emptyList()
-        }
-    }
-    
-    fun listTokenizerFiles(context: Context): List<File> {
-        val tokenizerDir = getTokenizerDirectory(context)
-        return if (tokenizerDir.exists()) {
-            tokenizerDir.listFiles()?.filter { it.isFile } ?: emptyList()
-        } else {
-            emptyList()
-        }
     }
 }
