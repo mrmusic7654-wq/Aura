@@ -1,1 +1,9 @@
-
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <external-files-path name="aura_root" path="AuraAI/" />
+    <external-files-path name="aura_models" path="AuraAI/models/" />
+    <external-files-path name="aura_tokenizer" path="AuraAI/tokenizer/" />
+    <external-files-path name="aura_exports" path="AuraAI/exports/" />
+    <external-path name="external_storage_root" path="." />
+    <cache-path name="cache" path="/" />
+</paths>
