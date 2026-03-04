@@ -21,12 +21,14 @@ class ModelManager(private val context: Context) {
     fun scanForModel(): Boolean {
         val modelsDir = FileHelper.getModelsDirectory(context)
         
+        Log.d("ModelManager", "Scanning for models in: ${modelsDir.absolutePath}")
+        
         if (!modelsDir.exists()) {
             Log.d("ModelManager", "Models directory doesn't exist")
             return false
         }
         
-        // Look for .tflite files (instead of .onnx)
+        // Look for .tflite files
         val tfliteFiles = modelsDir.listFiles { file -> 
             file.extension.equals("tflite", ignoreCase = true) 
         }
@@ -50,7 +52,8 @@ class ModelManager(private val context: Context) {
         return mapOf(
             "isLoaded" to _isModelLoaded.value,
             "modelName" to _modelName.value,
-            "modelPath" to (_modelPath.value ?: "Not found")
+            "modelPath" to (_modelPath.value ?: "Not found"),
+            "modelSizeMB" to (File(_modelPath.value ?: "").length() / (1024 * 1024))
         )
     }
 }
