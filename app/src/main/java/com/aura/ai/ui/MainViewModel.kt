@@ -6,14 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
 import com.aura.ai.data.Conversation
-import com.aura.ai.model.InferenceEngine
+import com.aura.ai.model.TensorFlowLiteEngine  // Changed from InferenceEngine
 import com.aura.ai.automation.CommandExecutor
 import com.aura.ai.automation.AuraAccessibilityService
 import com.aura.ai.utils.Constants
-import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import android.util.Log
 
 class MainViewModel(
@@ -22,7 +20,10 @@ class MainViewModel(
     
     private val TAG = "MainViewModel"
     private val chatDao = app.database.chatDao()
-    private val inferenceEngine = InferenceEngine(app)
+    
+    // ✅ SWITCHED to TensorFlowLiteEngine
+    private val inferenceEngine = TensorFlowLiteEngine(app)
+    
     private val commandExecutor = CommandExecutor(
         app, 
         app.deviceController,
@@ -45,31 +46,26 @@ class MainViewModel(
     
     init {
         viewModelScope.launch {
-            // Initialize model first
             initializeModel()
-            // Then create conversation
             createNewConversation()
         }
     }
     
     private suspend fun initializeModel() {
         try {
-            Log.d(TAG, "Initializing model...")
+            Log.d(TAG, "Initializing TFLite model...")
             
-            // Scan for model files
             val modelFound = app.modelManager.scanForModel()
             
             if (modelFound) {
                 _modelName.value = app.modelManager.modelName.value
                 
-                // Initialize inference engine
                 val initialized = inferenceEngine.initialize()
                 
                 if (initialized) {
                     _isModelReady.value = true
-                    Log.d(TAG, "✅ Model initialized: ${_modelName.value}")
+                    Log.d(TAG, "✅ TFLite model ready: ${_modelName.value}")
                     
-                    // Add system message to chat
                     val systemMessage = ChatMessage(
                         conversationId = currentConversationId,
                         content = "✅ Model loaded: ${_modelName.value}. Ready to chat!",
@@ -83,7 +79,7 @@ class MainViewModel(
                 }
             } else {
                 Log.e(TAG, "❌ No model found")
-                showErrorMessage("No model found. Please place a .onnx file in the models folder.")
+                showErrorMessage("No model found. Please download a model first.")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing model", e)
@@ -112,7 +108,6 @@ class MainViewModel(
     
     fun sendMessage(content: String) {
         viewModelScope.launch {
-            // Save user message
             val userMessage = ChatMessage(
                 conversationId = currentConversationId,
                 content = content,
@@ -120,27 +115,21 @@ class MainViewModel(
             )
             chatDao.insertMessage(userMessage)
             
-            // Show typing indicator
             _isTyping.value = true
             
             try {
-                // Check if it's a command
                 val isCommand = isCommand(content)
                 
                 val response = if (isCommand) {
-                    // Execute device command
                     commandExecutor.executeCommand(content)
                 } else {
-                    // Check if model is ready for chat
                     if (_isModelReady.value) {
-                        // Generate response from model
                         inferenceEngine.generateResponse(content)
                     } else {
-                        "Model is not ready yet. Please check your model files."
+                        "Model is not ready yet. Please download a model first."
                     }
                 }
                 
-                // Save AI response
                 val aiMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = response,
@@ -150,7 +139,6 @@ class MainViewModel(
                 )
                 chatDao.insertMessage(aiMessage)
                 
-                // Update conversation title if first message
                 if (_messages.value.size <= 2) {
                     val newTitle = content.take(30) + if (content.length > 30) "..." else ""
                     chatDao.getConversation(currentConversationId)?.let { conv ->
@@ -161,7 +149,6 @@ class MainViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing message", e)
                 
-                // Save error message
                 val errorMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = "❌ Error: ${e.message}",
@@ -178,40 +165,14 @@ class MainViewModel(
     private fun isCommand(content: String): Boolean {
         return Constants.APP_OPEN_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
                Constants.SCROLL_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.CLICK_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.BACK_COMMANDS.any { content.contains(it, ignoreCase = true) } ||
-               Constants.HOME_COMMANDS.any { content.contains(it, ignoreCase = true) }
+               Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) }
     }
     
     fun clearConversation() {
         viewModelScope.launch {
             chatDao.deleteConversationMessages(currentConversationId)
             createNewConversation()
-            
-            // Re-add system message if model is ready
-            if (_isModelReady.value) {
-                val systemMessage = ChatMessage(
-                    conversationId = currentConversationId,
-                    content = "✅ Model loaded: ${_modelName.value}. Ready to chat!",
-                    isUser = false,
-                    isCommand = false
-                )
-                chatDao.insertMessage(systemMessage)
-            }
         }
-    }
-    
-    fun retryModelLoad() {
-        viewModelScope.launch {
-            _isModelReady.value = false
-            showErrorMessage("🔄 Retrying model load...")
-            initializeModel()
-        }
-    }
-    
-    fun setAccessibilityService(service: AuraAccessibilityService?) {
-        // Update command executor with service instance when needed
     }
     
     override fun onCleared() {
