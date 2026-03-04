@@ -46,39 +46,34 @@ class InferenceEngine(private val context: Context) {
             // Initialize ONNX Runtime environment
             ortEnvironment = OrtEnvironment.getEnvironment()
             
-            // Create session options with basic, compatible settings
-            val sessionOptions = SessionOptions()
-            
-            // Set thread count for mobile CPU
-            sessionOptions.setIntraOpNumThreads(4)
-            sessionOptions.setInterOpNumThreads(4)
-            
-            // --- OPTIMIZATION LEVEL LINE REMOVED FOR COMPATIBILITY ---
-            // The enum names vary by version, so it's omitted for now.
-            
-            // Enable XNNPACK for ARM CPU acceleration (if available)
-            try {
-                // Pass an empty map for default options
-                sessionOptions.addXnnpack(emptyMap())
-                Log.d(TAG, "XNNPACK enabled")
-            } catch (e: Exception) {
-                Log.d(TAG, "XNNPACK not available, using default CPU")
-            }
-            
-            // Enable NNAPI for hardware acceleration (if available)
-            try {
-                sessionOptions.addNnapi()
-                Log.d(TAG, "NNAPI enabled")
-            } catch (e: Exception) {
-                Log.d(TAG, "NNAPI not available")
-            }
-            
-            // Enable memory optimizations (these are usually safe)
-            try {
-                sessionOptions.setMemoryPatternOptimization(true)
-                sessionOptions.setCPUArenaAllocator(true)
-            } catch (e: Exception) {
-                Log.w(TAG, "Memory optimizations not available")
+            // Create session options with FULL optimizations
+            val sessionOptions = SessionOptions().apply {
+                // Set thread count for mobile CPU
+                setIntraOpNumThreads(4)
+                setInterOpNumThreads(4)
+                
+                // ✅ THIS IS THE CORRECT ENUM FOR YOUR VERSION
+                setOptimizationLevel(SessionOptions.OptLevel.ALL_OPTIMIZATIONS)
+                
+                // Enable XNNPACK for ARM CPU acceleration
+                try {
+                    addXnnpack(emptyMap())
+                    Log.d(TAG, "XNNPACK enabled")
+                } catch (e: Exception) {
+                    Log.d(TAG, "XNNPACK not available")
+                }
+                
+                // Enable NNAPI for hardware acceleration
+                try {
+                    addNnapi()
+                    Log.d(TAG, "NNAPI enabled")
+                } catch (e: Exception) {
+                    Log.d(TAG, "NNAPI not available")
+                }
+                
+                // Memory optimizations
+                setMemoryPatternOptimization(true)
+                setCPUArenaAllocator(true)
             }
             
             // Create the session
@@ -109,25 +104,40 @@ class InferenceEngine(private val context: Context) {
                 return@withContext "⚠️ Model not initialized yet."
             }
             
+            if (ortSession == null) {
+                return@withContext "⚠️ Model session not available."
+            }
+            
             Log.d(TAG, "Generating response for: $prompt")
             
-            // TODO: Implement actual inference
+            // TODO: Implement actual inference with tokenization
             val response = when {
                 prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
                     "Hello! I'm running on ${_currentModel.value}. How can I help?"
+                    
                 prompt.contains("what model", ignoreCase = true) ->
                     "I'm using ${_currentModel.value}"
-                else ->
-                    "I received: '$prompt'"
+                    
+                else -> "I received: '$prompt'"
             }
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
+            Log.d(TAG, "Response generated in ${_lastInferenceTime.value}ms")
+            
             return@withContext response
             
         } catch (e: Exception) {
             Log.e(TAG, "Error generating response", e)
             return@withContext "❌ Error: ${e.message}"
         }
+    }
+    
+    fun getModelInfo(): Map<String, Any> {
+        return mapOf(
+            "initialized" to _isInitialized.value,
+            "modelName" to _currentModel.value,
+            "lastInferenceTimeMs" to _lastInferenceTime.value
+        )
     }
     
     fun shutdown() {
