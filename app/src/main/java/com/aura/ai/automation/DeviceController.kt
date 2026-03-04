@@ -96,11 +96,6 @@ class DeviceController(private val context: Context) {
         }
     }
     
-    fun goBack(): Boolean {
-        // This requires accessibility service
-        return false
-    }
-    
     fun goHome(): Boolean {
         val intent = Intent(Intent.ACTION_MAIN)
         intent.addCategory(Intent.CATEGORY_HOME)
