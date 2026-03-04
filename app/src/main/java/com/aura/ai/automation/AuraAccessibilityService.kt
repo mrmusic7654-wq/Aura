@@ -24,14 +24,7 @@ class AuraAccessibilityService : AccessibilityService() {
     }
     
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        when (event.eventType) {
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                // App changed
-            }
-            AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                // Something was clicked
-            }
-        }
+        // Handle accessibility events if needed
     }
     
     override fun onInterrupt() {
