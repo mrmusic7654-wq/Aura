@@ -9,7 +9,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aura.ai.AuraApplication
 import com.aura.ai.utils.FileHelper
-import com.aura.ai.utils.Constants
 import kotlinx.coroutines.launch
 
 @Composable
@@ -22,11 +21,13 @@ fun ModelSetupScreen(
     
     var isScanning by remember { mutableStateOf(false) }
     var isModelReady by remember { mutableStateOf(FileHelper.isModelReady(context)) }
+    var detectedModel by remember { mutableStateOf(FileHelper.getModelName(context)) }
     var statusMessage by remember { mutableStateOf("") }
     val externalPath = remember { FileHelper.getExternalDisplayPath(context) }
     
     LaunchedEffect(Unit) {
         isModelReady = FileHelper.isModelReady(context)
+        detectedModel = FileHelper.getModelName(context)
         if (isModelReady) {
             onModelLoaded()
         }
@@ -47,7 +48,7 @@ fun ModelSetupScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            "Powered by MobileLLM-600M",
+            "Auto-Detect Any ONNX Model",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )
@@ -55,7 +56,7 @@ fun ModelSetupScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Please place your model files in:",
+            "Place your model files in:",
             style = MaterialTheme.typography.bodyLarge
         )
         
@@ -84,22 +85,26 @@ fun ModelSetupScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    "Required Files:",
+                    "Model Detection:",
                     style = MaterialTheme.typography.titleSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "• Model: ${Constants.MODEL_FILENAME} (414MB)",
+                    "• Any .onnx file in /models/ folder",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    "• Tokenizer: ${Constants.TOKENIZER_FILENAME}",
+                    "• Tokenizer files (json, model) in /tokenizer/",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "• Place in: /models/ and /tokenizer/ folders",
-                    style = MaterialTheme.typography.bodySmall
-                )
+                if (detectedModel != "Unknown Model") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "✅ Detected: $detectedModel",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
         
@@ -120,11 +125,13 @@ fun ModelSetupScreen(
                     statusMessage = "Scanning for model files..."
                     
                     val modelReady = FileHelper.isModelReady(context)
+                    detectedModel = FileHelper.getModelName(context)
+                    
                     if (modelReady) {
-                        statusMessage = "✅ Model found! Loading..."
+                        statusMessage = "✅ Found: $detectedModel"
                         onModelLoaded()
                     } else {
-                        statusMessage = "❌ Model files not found. Please place them in the directory above."
+                        statusMessage = "❌ No ONNX model found. Place .onnx file in models folder."
                     }
                     
                     isScanning = false
@@ -132,7 +139,7 @@ fun ModelSetupScreen(
             },
             enabled = !isScanning
         ) {
-            Text(if (isScanning) "Scanning..." else "Scan for Model")
+            Text(if (isScanning) "Scanning..." else "Scan for Models")
         }
         
         Spacer(modifier = Modifier.height(16.dp))
