@@ -16,14 +16,12 @@ class AuraApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
-        // Initialize database
         database = Room.databaseBuilder(
             applicationContext,
             ChatDatabase::class.java,
             "aura_database"
         ).build()
         
-        // Initialize managers
         modelManager = ModelManager(applicationContext)
         deviceController = DeviceController(applicationContext)
     }
