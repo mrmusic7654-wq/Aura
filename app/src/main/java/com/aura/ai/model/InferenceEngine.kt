@@ -46,44 +46,26 @@ class InferenceEngine(private val context: Context) {
             // Initialize ONNX Runtime environment
             ortEnvironment = OrtEnvironment.getEnvironment()
             
-            // Create session options
+            // Create session options with basic, compatible settings
             val sessionOptions = SessionOptions()
             
-            // Set thread count
+            // Set thread count for mobile CPU
             sessionOptions.setIntraOpNumThreads(4)
             sessionOptions.setInterOpNumThreads(4)
             
-            // TRY DIFFERENT OPTIMIZATION LEVEL NAMES (one of these will work)
-            try {
-                // Try ALL_OPTIMIZATIONS first
-                sessionOptions.setOptimizationLevel(SessionOptions.OptLevel.ALL_OPTIMIZATIONS)
-                Log.d(TAG, "Using ALL_OPTIMIZATIONS")
-            } catch (e1: Error) {
-                try {
-                    // Try ALL
-                    sessionOptions.setOptimizationLevel(SessionOptions.OptLevel.ALL)
-                    Log.d(TAG, "Using ALL")
-                } catch (e2: Error) {
-                    try {
-                        // Try BASIC
-                        sessionOptions.setOptimizationLevel(SessionOptions.OptLevel.BASIC_OPTIMIZATIONS)
-                        Log.d(TAG, "Using BASIC_OPTIMIZATIONS")
-                    } catch (e3: Error) {
-                        // If all else fails, skip optimization
-                        Log.w(TAG, "Could not set optimization level, continuing without it")
-                    }
-                }
-            }
+            // --- OPTIMIZATION LEVEL LINE REMOVED FOR COMPATIBILITY ---
+            // The enum names vary by version, so it's omitted for now.
             
-            // Enable XNNPACK with empty options
+            // Enable XNNPACK for ARM CPU acceleration (if available)
             try {
+                // Pass an empty map for default options
                 sessionOptions.addXnnpack(emptyMap())
                 Log.d(TAG, "XNNPACK enabled")
             } catch (e: Exception) {
-                Log.w(TAG, "XNNPACK not available")
+                Log.d(TAG, "XNNPACK not available, using default CPU")
             }
             
-            // Enable NNAPI if available
+            // Enable NNAPI for hardware acceleration (if available)
             try {
                 sessionOptions.addNnapi()
                 Log.d(TAG, "NNAPI enabled")
@@ -91,7 +73,7 @@ class InferenceEngine(private val context: Context) {
                 Log.d(TAG, "NNAPI not available")
             }
             
-            // Memory optimizations
+            // Enable memory optimizations (these are usually safe)
             try {
                 sessionOptions.setMemoryPatternOptimization(true)
                 sessionOptions.setCPUArenaAllocator(true)
@@ -127,8 +109,20 @@ class InferenceEngine(private val context: Context) {
                 return@withContext "⚠️ Model not initialized yet."
             }
             
+            Log.d(TAG, "Generating response for: $prompt")
+            
+            // TODO: Implement actual inference
+            val response = when {
+                prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
+                    "Hello! I'm running on ${_currentModel.value}. How can I help?"
+                prompt.contains("what model", ignoreCase = true) ->
+                    "I'm using ${_currentModel.value}"
+                else ->
+                    "I received: '$prompt'"
+            }
+            
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
-            return@withContext "I received: '$prompt' (using ${_currentModel.value})"
+            return@withContext response
             
         } catch (e: Exception) {
             Log.e(TAG, "Error generating response", e)
@@ -140,6 +134,7 @@ class InferenceEngine(private val context: Context) {
         try {
             ortSession?.close()
             executor.shutdown()
+            Log.d(TAG, "Inference engine shutdown complete")
         } catch (e: Exception) {
             Log.e(TAG, "Error during shutdown", e)
         }
