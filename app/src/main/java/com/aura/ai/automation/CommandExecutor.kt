@@ -38,7 +38,6 @@ class CommandExecutor(
         
         val finalResult = result ?: "I don't know how to execute that command yet."
         
-        // Add to history
         _commandHistory.value = _commandHistory.value + ExecutedCommand(
             command = command,
             result = finalResult,
@@ -79,7 +78,6 @@ class CommandExecutor(
     }
     
     private fun executeOpenApp(command: String): String {
-        // Extract app name from command
         val commandWords = command.split(" ")
         val openCommandIndex = commandWords.indexOfFirst { it in Constants.APP_OPEN_COMMANDS }
         
@@ -98,7 +96,6 @@ class CommandExecutor(
             }
         }
         
-        // Try extracting from the end
         val appName = command.replace(Regex("(?i)^(open|launch|start|run)\\s+"), "").trim()
         if (appName.isNotEmpty()) {
             val success = deviceController.openAppByName(appName)
@@ -147,11 +144,9 @@ class CommandExecutor(
     }
     
     private fun executeClick(command: String): String {
-        // Extract what to click
         val clickTarget = command.replace(Regex("(?i)(click|tap|press|select)\\s+"), "").trim()
         
         return if (clickTarget.isNotEmpty() && accessibilityService != null) {
-            // This would need UI element detection
             "Clicking on '$clickTarget' is not yet implemented. This feature requires screen analysis."
         } else {
             "Please enable accessibility service to use click features"
