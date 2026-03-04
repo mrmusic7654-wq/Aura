@@ -25,13 +25,18 @@ class ModelDownloader(private val context: Context) {
     private val _isDownloading = MutableStateFlow(false)
     val isDownloading: StateFlow<Boolean> = _isDownloading
     
-    // Default model URLs - Change these to your actual model URLs
-    private val MODEL_URL = "https://huggingface.co/onnx-community/MobileLLM-600M/resolve/main/model_q4f16.onnx"
-    private val TOKENIZER_URL = "https://huggingface.co/onnx-community/MobileLLM-600M/resolve/main/tokenizer.json"
+    // ✅ USING 125M MODEL - FASTEST OPTION (88 MB)
+    private val MODEL_URL = "https://huggingface.co/onnx-community/MobileLLM-125M/resolve/main/model_q4f16.onnx"
+    private val TOKENIZER_URL = "https://huggingface.co/onnx-community/MobileLLM-125M/resolve/main/tokenizer.json"
+    
+    // Model file names
+    private val MODEL_FILENAME = "model_q4f16.onnx"
+    private val TOKENIZER_FILENAME = "tokenizer.json"
     
     suspend fun downloadDefaultModel(): Boolean = withContext(Dispatchers.IO) {
         _isDownloading.value = true
         _downloadStatus.value = "Starting download..."
+        _downloadProgress.value = 0
         
         try {
             // Create directories if needed
@@ -40,11 +45,11 @@ class ModelDownloader(private val context: Context) {
             val modelsDir = FileHelper.getModelsDirectory(context)
             val tokenizerDir = FileHelper.getTokenizerDirectory(context)
             
-            val modelFile = File(modelsDir, "model_q4f16.onnx")
-            val tokenizerFile = File(tokenizerDir, "tokenizer.json")
+            val modelFile = File(modelsDir, MODEL_FILENAME)
+            val tokenizerFile = File(tokenizerDir, TOKENIZER_FILENAME)
             
-            // Download model
-            _downloadStatus.value = "Downloading model (414 MB)..."
+            // Download model (88 MB)
+            _downloadStatus.value = "Downloading model (88 MB)..."
             val modelSuccess = downloadFile(MODEL_URL, modelFile)
             
             if (!modelSuccess) {
@@ -63,7 +68,7 @@ class ModelDownloader(private val context: Context) {
                 return@withContext false
             }
             
-            _downloadStatus.value = "Download complete!"
+            _downloadStatus.value = "Download complete! Model ready to use."
             _isDownloading.value = false
             true
             
@@ -77,8 +82,15 @@ class ModelDownloader(private val context: Context) {
     
     private suspend fun downloadFile(urlString: String, outputFile: File): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
+            // Delete old file if exists
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+            
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
+            connection.connectTimeout = 10000
+            connection.readTimeout = 30000
             connection.connect()
             
             val fileLength = connection.contentLength
@@ -87,14 +99,14 @@ class ModelDownloader(private val context: Context) {
             
             val buffer = ByteArray(8192)
             var bytesRead: Int
-            var totalBytesRead = 0
+            var totalBytesRead = 0L
             
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                 outputStream.write(buffer, 0, bytesRead)
                 totalBytesRead += bytesRead
                 
                 if (fileLength > 0) {
-                    val progress = (totalBytesRead * 100 / fileLength)
+                    val progress = ((totalBytesRead * 100) / fileLength).toInt()
                     _downloadProgress.value = progress
                 }
             }
@@ -103,14 +115,21 @@ class ModelDownloader(private val context: Context) {
             inputStream.close()
             connection.disconnect()
             
+            Log.d(TAG, "Downloaded: ${outputFile.absolutePath} (${outputFile.length()} bytes)")
             true
+            
         } catch (e: Exception) {
-            Log.e(TAG, "Download error", e)
+            Log.e(TAG, "Download error for $urlString", e)
             false
         }
     }
     
     fun cancelDownload() {
         _isDownloading.value = false
+        _downloadStatus.value = "Download cancelled"
+    }
+    
+    fun getModelSize(): String {
+        return "88 MB" // 125M model size
     }
 }
