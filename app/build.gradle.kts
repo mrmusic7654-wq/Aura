@@ -79,8 +79,17 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.0")
     kapt("androidx.room:room-compiler:2.6.0")
     
-    // ONNX Runtime
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+    // REMOVE ONNX RUNTIME
+    // implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
+    
+    // ADD TENSORFLOW LITE
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
+    
+    // MediaPipe for easier LLM support (optional but recommended)
+    implementation("com.google.mediapipe:tasks-genai:0.10.0")
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
