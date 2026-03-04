@@ -33,10 +33,9 @@ fun String.extractAppName(): String {
     return this
 }
 
-fun String.toReadableSize(): String {
-    val bytes = this.toLongOrNull() ?: return "0 B"
+fun Long.toReadableSize(): String {
     val units = listOf("B", "KB", "MB", "GB", "TB")
-    var size = bytes.toDouble()
+    var size = this.toDouble()
     var unitIndex = 0
     
     while (size >= 1024 && unitIndex < units.size - 1) {
