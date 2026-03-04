@@ -1,9 +1,11 @@
 package com.aura.ai.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme = darkColorScheme(
     primary = PremiumPrimary,
@@ -48,8 +50,9 @@ fun AuraAITheme(
     )
 }
 
+// Fixed shapes with proper imports
 val PremiumShapes = Shapes(
-    extraSmall = CutCornerShape(4.dp),
+    extraSmall = RoundedCornerShape(4.dp),
     small = RoundedCornerShape(8.dp),
     medium = RoundedCornerShape(12.dp),
     large = RoundedCornerShape(16.dp),
