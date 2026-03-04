@@ -9,15 +9,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +42,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
-import com.aura.ai.ui.theme.*
+import com.aura.ai.ui.theme.PremiumError
+import com.aura.ai.ui.theme.PremiumGradient1
+import com.aura.ai.ui.theme.PremiumGradient2
+import com.aura.ai.ui.theme.PremiumGradient3
+import com.aura.ai.ui.theme.PremiumPrimary
+import com.aura.ai.ui.theme.PremiumSuccess
 
 @Composable
 fun ChatScreen(
@@ -42,13 +63,6 @@ fun ChatScreen(
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     
-    // Gradient background
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(PremiumGradient1, PremiumGradient2, PremiumGradient3),
-        start = Offset(0f, 0f),
-        end = Offset(1000f, 1000f)
-    )
-    
     // Scroll to bottom when messages change
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -62,7 +76,7 @@ fun ChatScreen(
             onDismissRequest = { viewModel.confirmDelete(false) },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = PremiumError)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Confirm Delete", fontWeight = FontWeight.Bold)
                 }
@@ -71,7 +85,9 @@ fun ChatScreen(
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.confirmDelete(true) },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                        contentColor = PremiumError
+                    )
                 ) {
                     Text("Delete")
                 }
@@ -87,7 +103,6 @@ fun ChatScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(gradientBrush.copy(alpha = 0.05f))
             .padding(16.dp)
     ) {
         // Header
@@ -101,7 +116,7 @@ fun ChatScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(PremiumPrimary),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("A", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
@@ -141,7 +156,10 @@ fun ChatScreen(
                             .background(MaterialTheme.colorScheme.surface)
                             .padding(16.dp)
                     ) {
-                        Text("Aura is typing...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                        Text(
+                            "Aura is typing...",
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
                 }
             }
@@ -149,7 +167,7 @@ fun ChatScreen(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Input Field - FIXED: Removed weight() function call error
+        // Input Field
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -160,16 +178,11 @@ fun ChatScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { /* Attachments */ }) {
+                IconButton(onClick = {}) {
                     Icon(Icons.Default.Add, contentDescription = "Attach")
                 }
                 
-                // FIXED: Box with weight modifier properly applied
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp)
-                ) {
+                Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
                     BasicTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
@@ -214,7 +227,7 @@ fun MessageBubble(message: ChatMessage) {
             modifier = Modifier
                 .widthIn(max = 280.dp)
                 .shadow(4.dp),
-            color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+            color = if (isUser) PremiumPrimary else MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
@@ -235,13 +248,13 @@ fun MessageBubble(message: ChatMessage) {
                             Icons.Default.CheckCircle,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = if (isUser) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
+                            tint = if (isUser) Color.White.copy(alpha = 0.7f) else PremiumSuccess
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             "Executed",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isUser) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
+                            color = if (isUser) Color.White.copy(alpha = 0.7f) else PremiumSuccess
                         )
                     }
                 }
