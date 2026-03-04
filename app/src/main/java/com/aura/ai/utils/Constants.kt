@@ -10,12 +10,7 @@ object Constants {
     const val CHAT_HISTORY_FILE = "chat_history.json"
     const val EXPORT_DIR = "exports"
     
-    // UPDATED: MobileLLM-600M model files
-    const val MODEL_FILENAME = "model_q4f16.onnx"  // Make sure this matches EXACTLY
-    const val TOKENIZER_FILENAME = "tokenizer.json"
-    const val CONFIG_FILENAME = "model_config.json"
-    
-    // Model configuration for MobileLLM
+    // Model configuration
     const val MAX_SEQUENCE_LENGTH = 1024
     const val MAX_BATCH_SIZE = 1
     const val TEMPERATURE = 0.7f
@@ -23,8 +18,8 @@ object Constants {
     const val TOP_K = 50
     
     val REQUIRED_PERMISSIONS = arrayOf(
-        Manifest.permission.READ_EXTERNAL_STORAGE,
-        Manifest.permission.POST_NOTIFICATIONS
+        android.Manifest.permission.READ_EXTERNAL_STORAGE,
+        android.Manifest.permission.POST_NOTIFICATIONS
     )
     
     // Command keywords for automation
