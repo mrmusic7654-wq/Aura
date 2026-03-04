@@ -1,6 +1,11 @@
 package com.aura.ai
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +23,7 @@ import com.aura.ai.ui.*
 import com.aura.ai.utils.FileHelper
 import com.aura.ai.utils.PermissionHelper
 import com.aura.ai.utils.showToast
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -30,8 +36,18 @@ class MainActivity : ComponentActivity() {
         val allGranted = permissions.values.all { it }
         if (allGranted) {
             showToast("All permissions granted")
+            checkStoragePermission()
         } else {
             showToast("Some permissions were denied")
+        }
+    }
+    
+    private val manageStorageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        lifecycleScope.launch {
+            delay(1000)
+            checkModelAndProceed()
         }
     }
     
@@ -40,9 +56,8 @@ class MainActivity : ComponentActivity() {
         
         lifecycleScope.launch {
             FileHelper.createAuraDirectory(this@MainActivity)
+            checkPermissions()
         }
-        
-        permissionHelper.requestPermissions(requestPermissionLauncher)
         
         setContent {
             MaterialTheme {
@@ -55,6 +70,41 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    private fun checkPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                requestManageStorage()
+            } else {
+                permissionHelper.requestPermissions(requestPermissionLauncher)
+            }
+        } else {
+            permissionHelper.requestPermissions(requestPermissionLauncher)
+        }
+    }
+    
+    private fun requestManageStorage() {
+        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+        intent.data = Uri.parse("package:$packageName")
+        manageStorageLauncher.launch(intent)
+    }
+    
+    private fun checkStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                requestManageStorage()
+            }
+        }
+    }
+    
+    private suspend fun checkModelAndProceed() {
+        val isReady = FileHelper.isModelReady(this@MainActivity)
+        if (isReady) {
+            showToast("✅ Model loaded successfully!")
+        } else {
+            showToast("⚠️ Models not found. Please check the setup screen.")
+        }
+    }
 }
 
 @Composable
@@ -64,6 +114,7 @@ fun AuraApp() {
     val context = LocalContext.current
     
     LaunchedEffect(Unit) {
+        delay(2000)
         val isModelReady = FileHelper.isModelReady(context)
         startDestination = if (isModelReady) "chat" else "model_setup"
     }
@@ -75,7 +126,6 @@ fun AuraApp() {
         composable("splash") {
             SplashScreen(
                 onTimeout = {
-                    // FIXED: Use the outer context, don't create new one
                     if (FileHelper.isModelReady(context)) {
                         navController.navigate("chat") {
                             popUpTo("splash") { inclusive = true }
