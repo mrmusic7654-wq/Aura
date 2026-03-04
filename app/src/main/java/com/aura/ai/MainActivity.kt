@@ -156,15 +156,14 @@ fun AuraApp() {
         }
         
         composable("download") {
+            // ⬇️ FIXED: Removed the non-existent onBackPressed parameter
             DownloadScreen(
                 onDownloadComplete = {
                     navController.navigate("chat") {
                         popUpTo("download") { inclusive = true }
                     }
-                },
-                onBackPressed = {
-                    navController.popBackStack()
                 }
+                // The onBackPressed parameter has been removed
             )
         }
         
