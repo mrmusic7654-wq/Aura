@@ -27,9 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
 import com.aura.ai.ui.theme.*
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
@@ -43,16 +41,15 @@ fun ChatScreen(
     val showDeleteConfirmation by viewModel.showDeleteConfirmation.collectAsState()
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
     
-    // Simple gradient background
+    // Gradient background
     val gradientBrush = Brush.linearGradient(
         colors = listOf(PremiumGradient1, PremiumGradient2, PremiumGradient3),
         start = Offset(0f, 0f),
         end = Offset(1000f, 1000f)
     )
     
-    // Auto-scroll to bottom when new messages arrive
+    // Scroll to bottom when messages change
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -65,183 +62,141 @@ fun ChatScreen(
             onDismissRequest = { viewModel.confirmDelete(false) },
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = PremiumError,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Confirm Delete",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Confirm Delete", fontWeight = FontWeight.Bold)
                 }
             },
-            text = {
-                Text("Are you sure you want to delete these files? This action cannot be undone.")
-            },
+            text = { Text("Are you sure you want to delete these files?") },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = { viewModel.confirmDelete(true) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PremiumError
-                    )
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete", color = Color.White)
+                    Text("Delete")
                 }
             },
             dismissButton = {
-                OutlinedButton(
-                    onClick = { viewModel.confirmDelete(false) }
-                ) {
+                TextButton(onClick = { viewModel.confirmDelete(false) }) {
                     Text("Cancel")
                 }
-            },
-            shape = RoundedCornerShape(16.dp)
+            }
         )
     }
     
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(gradientBrush.copy(alpha = 0.05f))
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header
-            HeaderSection(
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToConversations = onNavigateToConversations
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("A", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Aura AI", style = MaterialTheme.typography.headlineSmall)
+            }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Row {
+                IconButton(onClick = onNavigateToConversations) {
+                    Icon(Icons.Default.History, contentDescription = "History")
+                }
+                IconButton(onClick = onNavigateToSettings) {
+                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Messages List
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(messages) { message ->
+                MessageBubble(message)
+            }
             
-            // Messages List
-            MessagesList(
-                messages = messages,
-                listState = listState,
-                isTyping = isTyping
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Input Field
-            InputSection(
-                inputText = inputText,
-                onInputChange = { inputText = it },
-                onSendClick = {
-                    if (inputText.isNotBlank()) {
-                        viewModel.sendMessage(inputText)
-                        inputText = ""
-                        // Scroll to bottom after sending
-                        scope.launch {
-                            listState.animateScrollToItem(messages.size)
-                        }
+            if (isTyping) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp)
+                    ) {
+                        Text("Aura is typing...", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                     }
                 }
-            )
-        }
-    }
-}
-
-@Composable
-fun HeaderSection(
-    onNavigateToSettings: () -> Unit,
-    onNavigateToConversations: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Logo and App Name
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(PremiumGradient1, PremiumGradient2)
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    "A",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
             }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Text(
-                "Aura AI",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
-                )
-            )
         }
         
-        // Action Buttons
-        Row {
-            IconButton(
-                onClick = onNavigateToConversations,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f))
-            ) {
-                Icon(
-                    Icons.Default.History,
-                    contentDescription = "History",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            IconButton(
-                onClick = onNavigateToSettings,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f))
-            ) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = "Settings",
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MessagesList(
-    messages: List<ChatMessage>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
-    isTyping: Boolean
-) {
-    LazyColumn(
-        modifier = Modifier.weight(1f),
-        state = listState,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(messages) { message ->
-            MessageBubble(message = message)
-        }
+        Spacer(modifier = Modifier.height(8.dp))
         
-        if (isTyping) {
-            item {
-                TypingIndicator()
+        // Input Field - FIXED: Removed weight() function call error
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 1.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { /* Attachments */ }) {
+                    Icon(Icons.Default.Add, contentDescription = "Attach")
+                }
+                
+                // FIXED: Box with weight modifier properly applied
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    BasicTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        decorationBox = { innerTextField ->
+                            if (inputText.isEmpty()) {
+                                Text(
+                                    "Type a message...",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    )
+                }
+                
+                if (inputText.isNotBlank()) {
+                    Button(
+                        onClick = {
+                            viewModel.sendMessage(inputText)
+                            inputText = ""
+                        },
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Text("Send")
+                    }
+                }
             }
         }
     }
@@ -258,16 +213,8 @@ fun MessageBubble(message: ChatMessage) {
         Surface(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .shadow(
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 16.dp,
-                        bottomStart = if (isUser) 16.dp else 4.dp,
-                        bottomEnd = if (isUser) 4.dp else 16.dp
-                    )
-                ),
-            color = if (isUser) PremiumPrimary else MaterialTheme.colorScheme.surface,
+                .shadow(4.dp),
+            color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
@@ -275,151 +222,26 @@ fun MessageBubble(message: ChatMessage) {
                 bottomEnd = if (isUser) 4.dp else 16.dp
             )
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = message.content,
-                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyMedium
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface
                 )
                 
                 if (message.isCommand && message.commandExecuted) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.CheckCircle,
-                            contentDescription = "Executed",
+                            contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = if (isUser) Color.White.copy(alpha = 0.7f) else PremiumSuccess
+                            tint = if (isUser) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Executed",
+                            "Executed",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isUser) Color.White.copy(alpha = 0.7f) else PremiumSuccess
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TypingIndicator() {
-    Row(
-        modifier = Modifier
-            .padding(8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Three static dots
-        repeat(3) { index ->
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(PremiumPrimary.copy(alpha = 0.5f))
-            )
-            if (index < 2) {
-                Spacer(modifier = Modifier.width(4.dp))
-            }
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "Aura is thinking...",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-        )
-    }
-}
-
-@Composable
-fun InputSection(
-    inputText: String,
-    onInputChange: (String) -> Unit,
-    onSendClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Attachment Button
-            IconButton(
-                onClick = { /* TODO: Attachments */ },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Attach",
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
-            
-            // Text Input
-            BasicTextField(
-                value = inputText,
-                onValueChange = onInputChange,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp)
-                    ) {
-                        if (inputText.isEmpty()) {
-                            Text(
-                                text = "Type a message...",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-            
-            // Send Button
-            if (inputText.isNotBlank()) {
-                Button(
-                    onClick = onSendClick,
-                    modifier = Modifier
-                        .height(40.dp)
-                        .clip(RoundedCornerShape(20.dp)),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PremiumPrimary
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Send",
-                            color = Color.White,
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
-                        Icon(
-                            Icons.Default.Send,
-                            contentDescription = "Send",
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.White
+                            color = if (isUser) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.primary
                         )
                     }
                 }
