@@ -11,6 +11,9 @@ import kotlinx.coroutines.withContext
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import ai.onnxruntime.OrtSession.SessionOptions
+import ai.onnxruntime.OnnxTensor
+import ai.onnxruntime.NodeInfo
+import java.nio.LongBuffer
 import java.util.concurrent.Executors
 
 class InferenceEngine(private val context: Context) {
@@ -30,6 +33,20 @@ class InferenceEngine(private val context: Context) {
     private val _lastInferenceTime = MutableStateFlow(0L)
     val lastInferenceTime: StateFlow<Long> = _lastInferenceTime
     
+    // Simple tokenizer placeholder - you'll need to replace with actual tokenizer
+    private fun tokenize(text: String): LongArray {
+        // TODO: Replace with actual tokenizer
+        // This is a SIMPLE placeholder - just converts chars to longs
+        return text.map { it.code.toLong() }.toLongArray()
+    }
+    
+    // Simple detokenizer placeholder
+    private fun detokenize(tokens: LongArray): String {
+        // TODO: Replace with actual detokenizer
+        // This is a SIMPLE placeholder - just converts longs back to chars
+        return tokens.map { it.toInt().toChar() }.joinToString("")
+    }
+    
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             val modelFile = FileHelper.getModelFile(context)
@@ -46,17 +63,12 @@ class InferenceEngine(private val context: Context) {
             // Initialize ONNX Runtime environment
             ortEnvironment = OrtEnvironment.getEnvironment()
             
-            // Create session options with proper optimizations for v1.17.1
+            // Create session options
             val sessionOptions = SessionOptions().apply {
-                // Set thread count for mobile CPU
                 setIntraOpNumThreads(4)
                 setInterOpNumThreads(4)
+                setOptimizationLevel(SessionOptions.OptLevel.values()[2])
                 
-                // FOR ONNX RUNTIME 1.17.1 - The correct enum is ALL_OPTIMIZATIONS
-                // But we need to access it differently
-                setOptimizationLevel(SessionOptions.OptLevel.values()[2]) // 2 = ALL_OPTIMIZATIONS
-                
-                // Enable XNNPACK for ARM CPU acceleration
                 try {
                     addXnnpack(emptyMap())
                     Log.d(TAG, "XNNPACK enabled")
@@ -64,7 +76,6 @@ class InferenceEngine(private val context: Context) {
                     Log.d(TAG, "XNNPACK not available")
                 }
                 
-                // Enable NNAPI for hardware acceleration
                 try {
                     addNnapi()
                     Log.d(TAG, "NNAPI enabled")
@@ -72,7 +83,6 @@ class InferenceEngine(private val context: Context) {
                     Log.d(TAG, "NNAPI not available")
                 }
                 
-                // Memory optimizations
                 setMemoryPatternOptimization(true)
                 setCPUArenaAllocator(true)
             }
@@ -84,6 +94,10 @@ class InferenceEngine(private val context: Context) {
                 Log.e(TAG, "Failed to create session")
                 return@withContext false
             }
+            
+            // Log model info
+            Log.d(TAG, "Model inputs: ${ortSession?.inputInfo?.keys}")
+            Log.d(TAG, "Model outputs: ${ortSession?.outputInfo?.keys}")
             
             _currentModel.value = modelName
             _isInitialized.value = true
@@ -105,22 +119,50 @@ class InferenceEngine(private val context: Context) {
                 return@withContext "⚠️ Model not initialized yet."
             }
             
-            if (ortSession == null) {
+            if (ortSession == null || ortEnvironment == null) {
                 return@withContext "⚠️ Model session not available."
             }
             
             Log.d(TAG, "Generating response for: $prompt")
             
-            // TODO: Implement actual inference with tokenization
-            val response = when {
-                prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
-                    "Hello! I'm running on ${_currentModel.value}. How can I help?"
-                    
-                prompt.contains("what model", ignoreCase = true) ->
-                    "I'm using ${_currentModel.value}"
-                    
-                else -> "I received: '$prompt'"
+            // Step 1: Tokenize the input
+            val inputTokens = tokenize(prompt)
+            Log.d(TAG, "Tokenized ${inputTokens.size} tokens")
+            
+            // Step 2: Create input tensor
+            val inputShape = longArrayOf(1, inputTokens.size.toLong())
+            val inputBuffer = LongBuffer.wrap(inputTokens)
+            
+            val inputTensor = OnnxTensor.createTensor(
+                ortEnvironment,
+                inputBuffer,
+                inputShape
+            )
+            
+            // Step 3: Get input/output names
+            val inputName = ortSession?.inputInfo?.keys?.firstOrNull() ?: return@withContext "No input found"
+            val outputName = ortSession?.outputInfo?.keys?.firstOrNull() ?: return@withContext "No output found"
+            
+            // Step 4: Run inference
+            val inputs = mapOf(inputName to inputTensor)
+            val results = ortSession?.run(inputs)
+            
+            // Step 5: Get output tensor
+            val outputTensor = results?.get(outputName)?.value as? OnnxTensor
+            val outputData = outputTensor?.longBuffer
+            
+            // Step 6: Convert output to text
+            val response = if (outputData != null) {
+                val outputTokens = LongArray(outputData.remaining())
+                outputData.get(outputTokens)
+                detokenize(outputTokens)
+            } else {
+                "⚠️ No output generated"
             }
+            
+            // Clean up
+            inputTensor.close()
+            results?.close()
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
             Log.d(TAG, "Response generated in ${_lastInferenceTime.value}ms")
