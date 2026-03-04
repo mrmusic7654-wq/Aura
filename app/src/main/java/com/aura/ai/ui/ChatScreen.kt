@@ -1,6 +1,5 @@
 package com.aura.ai.ui
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +20,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer  // IMPORTANT: Added missing import
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -77,7 +77,6 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Premium Header
             PremiumHeader(
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToConversations = onNavigateToConversations
@@ -85,7 +84,6 @@ fun ChatScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Messages List
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 state = listState,
@@ -104,7 +102,6 @@ fun ChatScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Premium Input Field
             PremiumInputField(
                 inputText = inputText,
                 onInputChange = { inputText = it },
@@ -160,14 +157,11 @@ fun PremiumHeader(
         }
         
         Row {
-            // Premium Icon Buttons
             PremiumIconButton(
                 icon = Icons.Default.History,
                 onClick = onNavigateToConversations
             )
-            
             Spacer(modifier = Modifier.width(8.dp))
-            
             PremiumIconButton(
                 icon = Icons.Default.Settings,
                 onClick = onNavigateToSettings
@@ -260,6 +254,34 @@ fun PremiumMessageBubble(message: ChatMessage) {
 
 @Composable
 fun PremiumTypingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val scales = listOf(
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(400),
+                repeatMode = RepeatMode.Reverse
+            )
+        ),
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(400, delayMillis = 200),
+                repeatMode = RepeatMode.Reverse
+            )
+        ),
+        infiniteTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(400, delayMillis = 400),
+                repeatMode = RepeatMode.Reverse
+            )
+        )
+    )
+    
     Row(
         modifier = Modifier
             .padding(8.dp)
@@ -267,23 +289,16 @@ fun PremiumTypingIndicator() {
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        repeat(3) { index ->
-            val infiniteTransition = rememberInfiniteTransition()
-            val scale by infiniteTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.2f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(400, delayMillis = index * 200),
-                    repeatMode = RepeatMode.Reverse
-                )
-            )
-            
+        scales.forEachIndexed { index, scaleState ->
             Box(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
                     .background(PremiumPrimary.copy(alpha = 0.5f))
-                    .graphicsLayer { scaleX = scale; scaleY = scale }
+                    .graphicsLayer {
+                        scaleX = scaleState.value
+                        scaleY = scaleState.value
+                    }
             )
             
             if (index < 2) {
@@ -311,13 +326,11 @@ fun PremiumInputField(
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Attachment button
             PremiumIconButton(
                 icon = Icons.Default.Add,
                 onClick = { /* TODO: Attachments */ }
             )
             
-            // Text field
             BasicTextField(
                 value = inputText,
                 onValueChange = onInputChange,
@@ -340,7 +353,6 @@ fun PremiumInputField(
                 }
             )
             
-            // Send button
             if (inputText.isNotBlank()) {
                 FloatingActionButton(
                     onClick = onSendClick,
