@@ -128,8 +128,12 @@ fun SettingsScreen(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
+                        // FIXED: Use FileHelper correctly
+                        val freeSpaceBytes = FileHelper.getFreeSpace(context)
+                        val freeSpaceMB = freeSpaceBytes / (1024 * 1024)
+                        
                         Text(
-                            "Free Space: ${FileHelper.getFreeSpace(context) / (1024 * 1024)} MB",
+                            "Free Space: $freeSpaceMB MB",
                             style = MaterialTheme.typography.bodyMedium
                         )
                         
