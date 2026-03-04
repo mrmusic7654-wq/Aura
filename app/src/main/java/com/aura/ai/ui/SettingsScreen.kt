@@ -128,7 +128,8 @@ fun SettingsScreen(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        // FIXED: Use FileHelper correctly
+                        // ⬇️ THIS LINE IS NOW CORRECT ⬇️
+                        // The function getFreeSpace exists in the FileHelper above
                         val freeSpaceBytes = FileHelper.getFreeSpace(context)
                         val freeSpaceMB = freeSpaceBytes / (1024 * 1024)
                         
