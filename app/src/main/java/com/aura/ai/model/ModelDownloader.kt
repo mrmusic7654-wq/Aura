@@ -25,9 +25,13 @@ class ModelDownloader(private val context: Context) {
     private val _isDownloading = MutableStateFlow(false)
     val isDownloading: StateFlow<Boolean> = _isDownloading
     
-    // ✅ CORRECT 125M Model (88 MB)
-    private val MODEL_URL = "https://huggingface.co/onnx-community/MobileLLM-125M/resolve/main/onnx/model_q4f16.onnx"
-    private val TOKENIZER_URL = "https://huggingface.co/onnx-community/MobileLLM-125M/raw/main/tokenizer.json"
+    // ✅ TFLite MODEL URLs (pre-converted)
+    private val MODEL_URL = "https://huggingface.co/Xenova/mobilellm-125m-quantized/resolve/main/model_quantized.tflite"
+    private val TOKENIZER_URL = "https://huggingface.co/Xenova/mobilellm-125m-quantized/raw/main/tokenizer.json"
+    
+    // Model file names
+    private val MODEL_FILENAME = "model.tflite"
+    private val TOKENIZER_FILENAME = "tokenizer.json"
     
     suspend fun downloadDefaultModel(): Boolean = withContext(Dispatchers.IO) {
         _isDownloading.value = true
@@ -40,11 +44,11 @@ class ModelDownloader(private val context: Context) {
             val modelsDir = FileHelper.getModelsDirectory(context)
             val tokenizerDir = FileHelper.getTokenizerDirectory(context)
             
-            val modelFile = File(modelsDir, "model_q4f16.onnx")
-            val tokenizerFile = File(tokenizerDir, "tokenizer.json")
+            val modelFile = File(modelsDir, MODEL_FILENAME)
+            val tokenizerFile = File(tokenizerDir, TOKENIZER_FILENAME)
             
-            // Download 88MB model
-            _downloadStatus.value = "Downloading model (88 MB)..."
+            // Download model
+            _downloadStatus.value = "Downloading model (125 MB)..."
             val modelSuccess = downloadFile(MODEL_URL, modelFile)
             if (!modelSuccess) throw Exception("Model download failed")
             
@@ -68,6 +72,8 @@ class ModelDownloader(private val context: Context) {
     private suspend fun downloadFile(urlString: String, outputFile: File): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             Log.d(TAG, "Downloading from: $urlString")
+            
+            if (outputFile.exists()) outputFile.delete()
             
             val url = URL(urlString)
             val connection = url.openConnection() as HttpURLConnection
