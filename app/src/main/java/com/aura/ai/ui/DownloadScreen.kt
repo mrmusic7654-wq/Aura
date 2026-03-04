@@ -7,8 +7,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.aura.ai.AuraApplication
 import com.aura.ai.model.ModelDownloader
 import kotlinx.coroutines.launch
 
@@ -20,9 +18,16 @@ fun DownloadScreen(
     val scope = rememberCoroutineScope()
     val downloader = remember { ModelDownloader(context) }
     
-    val downloadProgress by downloader.downloadProgress.collectAsState()
-    val downloadStatus by downloader.downloadStatus.collectAsState()
-    val isDownloading by downloader.isDownloading.collectAsState()
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0) }
+    var downloadStatus by remember { mutableStateOf("") }
+    
+    // Collect states from downloader
+    LaunchedEffect(downloader) {
+        downloader.isDownloading.collect { isDownloading = it }
+        downloader.downloadProgress.collect { downloadProgress = it }
+        downloader.downloadStatus.collect { downloadStatus = it }
+    }
     
     Column(
         modifier = Modifier
@@ -39,7 +44,7 @@ fun DownloadScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Aura AI needs to download the MobileLLM model (414 MB) to work.",
+            "Aura AI needs to download the MobileLLM model to work.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
@@ -56,16 +61,21 @@ fun DownloadScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    "Model: MobileLLM-600M Q4F16",
-                    style = MaterialTheme.typography.titleMedium
+                    "✅ FIXED: 125M Model (88 MB)",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Size: 414 MB",
+                    "Model: MobileLLM-125M Q4F16",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    "Tokenizer: tokenizer.json",
+                    "Size: 88 MB",
                     style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Download once, use forever offline",
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
@@ -100,7 +110,7 @@ fun DownloadScreen(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Cancel")
+                Text("Cancel Download")
             }
         } else {
             Button(
@@ -114,16 +124,16 @@ fun DownloadScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Download Model (414 MB)")
+                Text("Start Download (88 MB)")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Requires Wi-Fi connection. Download once, use offline forever.",
+            "Smaller model = faster download and better performance!",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.primary,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
