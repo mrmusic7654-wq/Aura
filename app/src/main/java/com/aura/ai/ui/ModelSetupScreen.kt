@@ -7,31 +7,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.aura.ai.AuraApplication
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.launch
 
 @Composable
 fun ModelSetupScreen(
-    onModelLoaded: () -> Unit
+    onScanPressed: () -> Unit,
+    onDownloadPressed: () -> Unit
 ) {
     val context = LocalContext.current
-    val app = context.applicationContext as AuraApplication
     val scope = rememberCoroutineScope()
     
     var isScanning by remember { mutableStateOf(false) }
-    var isModelReady by remember { mutableStateOf(FileHelper.isModelReady(context)) }
-    var detectedModel by remember { mutableStateOf(FileHelper.getModelName(context)) }
     var statusMessage by remember { mutableStateOf("") }
     val externalPath = remember { FileHelper.getExternalDisplayPath(context) }
-    
-    LaunchedEffect(Unit) {
-        isModelReady = FileHelper.isModelReady(context)
-        detectedModel = FileHelper.getModelName(context)
-        if (isModelReady) {
-            onModelLoaded()
-        }
-    }
     
     Column(
         modifier = Modifier
@@ -48,36 +37,57 @@ fun ModelSetupScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            "Auto-Detect Any ONNX Model",
+            "Choose how to get your AI model",
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
-        Text(
-            "Place your model files in:",
-            style = MaterialTheme.typography.bodyLarge
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
+        // Option 1: Download automatically
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer
             )
         ) {
-            Text(
-                text = externalPath,
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    "Option 1: Download Automatically",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    "• Model: MobileLLM-600M (414 MB)",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "• Works immediately after download",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "• Requires Wi-Fi connection",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Button(
+                    onClick = onDownloadPressed,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Download Model (414 MB)")
+                }
+            }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
+        // Option 2: Manual placement
         Card(
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -85,73 +95,74 @@ fun ModelSetupScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    "Model Detection:",
-                    style = MaterialTheme.typography.titleSmall
+                    "Option 2: Add Manually",
+                    style = MaterialTheme.typography.titleLarge
                 )
+                
                 Spacer(modifier = Modifier.height(8.dp))
+                
                 Text(
-                    "• Any .onnx file in /models/ folder",
+                    "Place your model files in:",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    "• Tokenizer files (json, model) in /tokenizer/",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                if (detectedModel != "Unknown Model") {
-                    Spacer(modifier = Modifier.height(8.dp))
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium
+                ) {
                     Text(
-                        "✅ Detected: $detectedModel",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        text = externalPath,
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        if (statusMessage.isNotEmpty()) {
-            Text(
-                text = statusMessage,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-        
-        Button(
-            onClick = {
-                scope.launch {
-                    isScanning = true
-                    statusMessage = "Scanning for model files..."
-                    
-                    val modelReady = FileHelper.isModelReady(context)
-                    detectedModel = FileHelper.getModelName(context)
-                    
-                    if (modelReady) {
-                        statusMessage = "✅ Found: $detectedModel"
-                        onModelLoaded()
-                    } else {
-                        statusMessage = "❌ No ONNX model found. Place .onnx file in models folder."
-                    }
-                    
-                    isScanning = false
-                }
-            },
-            enabled = !isScanning
-        ) {
-            Text(if (isScanning) "Scanning..." else "Scan for Models")
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (isModelReady) {
-            Button(
-                onClick = onModelLoaded,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    "• Any .onnx file in /models/ folder",
+                    style = MaterialTheme.typography.bodySmall
                 )
-            ) {
-                Text("Continue to Chat")
+                Text(
+                    "• tokenizer.json in /tokenizer/ folder",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (statusMessage.isNotEmpty()) {
+                    Text(
+                        text = statusMessage,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+                
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isScanning = true
+                            statusMessage = "Scanning for model files..."
+                            
+                            val modelReady = FileHelper.isModelReady(context)
+                            
+                            if (modelReady) {
+                                statusMessage = "✅ Model found!"
+                                onScanPressed()
+                            } else {
+                                statusMessage = "❌ No model found. Try downloading or check files."
+                            }
+                            
+                            isScanning = false
+                        }
+                    },
+                    enabled = !isScanning,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isScanning) "Scanning..." else "Scan for Existing Models")
+                }
             }
         }
     }
