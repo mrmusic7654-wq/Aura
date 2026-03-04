@@ -9,13 +9,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -28,13 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
-import com.aura.ai.ui.theme.PremiumGradient1
-import com.aura.ai.ui.theme.PremiumGradient2
-import com.aura.ai.ui.theme.PremiumGradient3
-import com.aura.ai.ui.theme.PremiumPrimary
-import kotlinx.coroutines.delay
+import com.aura.ai.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
@@ -133,17 +129,6 @@ fun PremiumHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Animated Logo
-        var animation by remember { mutableStateOf(0f) }
-        LaunchedEffect(Unit) {
-            while(true) {
-                animation = 0f
-                delay(2000)
-                animation = 1f
-                delay(2000)
-            }
-        }
-        
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -283,17 +268,15 @@ fun PremiumTypingIndicator() {
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         repeat(3) { index ->
-            val delay = index * 200
-            var scale by remember { mutableStateOf(1f) }
-            
-            LaunchedEffect(Unit) {
-                while(true) {
-                    delay(delay.toLong())
-                    scale = 1.2f
-                    delay(400)
-                    scale = 1f
-                }
-            }
+            val infiniteTransition = rememberInfiniteTransition()
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.2f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(400, delayMillis = index * 200),
+                    repeatMode = RepeatMode.Reverse
+                )
+            )
             
             Box(
                 modifier = Modifier
