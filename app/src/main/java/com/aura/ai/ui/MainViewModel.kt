@@ -1,6 +1,7 @@
 package com.aura.ai.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
@@ -104,5 +105,15 @@ class MainViewModel(
     
     fun setAccessibilityService(service: AuraAccessibilityService?) {
         // Update command executor with service instance
+    }
+}
+
+class MainViewModelFactory(private val app: AuraApplication) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MainViewModel(app) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
