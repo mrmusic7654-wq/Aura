@@ -5,7 +5,7 @@ import android.util.Log
 import java.io.File
 
 object FileHelper {
-    private const val TAG = "FileHelper"
+    private const val TAG = "FileHelper-DEBUG"
     
     data class ModelFiles(
         val modelFile: File,
@@ -14,19 +14,21 @@ object FileHelper {
     )
     
     fun getAuraDirectory(context: Context): File {
-        return File(context.getExternalFilesDir(null), Constants.AURA_DIR)
+        val dir = File(context.getExternalFilesDir(null), Constants.AURA_DIR)
+        Log.d(TAG, "Aura directory: ${dir.absolutePath}")
+        return dir
     }
     
     fun getModelsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.MODELS_DIR)
+        val dir = File(getAuraDirectory(context), Constants.MODELS_DIR)
+        Log.d(TAG, "Models directory: ${dir.absolutePath}")
+        return dir
     }
     
     fun getTokenizerDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.TOKENIZER_DIR)
-    }
-    
-    fun getExportsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.EXPORT_DIR)
+        val dir = File(getAuraDirectory(context), Constants.TOKENIZER_DIR)
+        Log.d(TAG, "Tokenizer directory: ${dir.absolutePath}")
+        return dir
     }
     
     fun createAuraDirectory(context: Context): Boolean {
@@ -34,14 +36,21 @@ object FileHelper {
             val auraDir = getAuraDirectory(context)
             val modelsDir = getModelsDirectory(context)
             val tokenizerDir = getTokenizerDirectory(context)
-            val exportsDir = getExportsDirectory(context)
             
-            Log.d(TAG, "Creating directories at: ${auraDir.absolutePath}")
+            Log.d(TAG, "Creating directories...")
             
-            if (!auraDir.exists()) auraDir.mkdirs()
-            if (!modelsDir.exists()) modelsDir.mkdirs()
-            if (!tokenizerDir.exists()) tokenizerDir.mkdirs()
-            if (!exportsDir.exists()) exportsDir.mkdirs()
+            if (!auraDir.exists()) {
+                val created = auraDir.mkdirs()
+                Log.d(TAG, "Created aura dir: $created")
+            }
+            if (!modelsDir.exists()) {
+                val created = modelsDir.mkdirs()
+                Log.d(TAG, "Created models dir: $created")
+            }
+            if (!tokenizerDir.exists()) {
+                val created = tokenizerDir.mkdirs()
+                Log.d(TAG, "Created tokenizer dir: $created")
+            }
             
             true
         } catch (e: Exception) {
@@ -54,72 +63,67 @@ object FileHelper {
         val modelsDir = getModelsDirectory(context)
         val tokenizerDir = getTokenizerDirectory(context)
         
-        Log.d(TAG, "Scanning for models in: ${modelsDir.absolutePath}")
+        Log.d(TAG, "=== MODEL DETECTION ===")
+        Log.d(TAG, "Models dir exists: ${modelsDir.exists()}")
         
         if (!modelsDir.exists()) {
-            Log.d(TAG, "Models directory doesn't exist")
+            Log.e(TAG, "❌ Models directory does not exist!")
+            createAuraDirectory(context)
             return null
         }
         
-        // Find any .onnx file
+        // List ALL files in models directory
+        Log.d(TAG, "Files in models directory:")
+        val allFiles = modelsDir.listFiles()
+        if (allFiles == null || allFiles.isEmpty()) {
+            Log.e(TAG, "❌ Models directory is EMPTY!")
+        } else {
+            allFiles.forEach { file ->
+                Log.d(TAG, "  📄 ${file.name} (${file.length()} bytes) - canRead: ${file.canRead()}")
+            }
+        }
+        
+        // Find ANY .onnx file
         val onnxFiles = modelsDir.listFiles { file -> 
             file.extension.equals("onnx", ignoreCase = true) 
         }
         
         if (onnxFiles.isNullOrEmpty()) {
-            Log.d(TAG, "No ONNX files found")
+            Log.e(TAG, "❌ No .onnx files found!")
             return null
         }
         
-        // Use the first ONNX file found
         val modelFile = onnxFiles[0]
-        Log.d(TAG, "Found model: ${modelFile.name} (${modelFile.length() / (1024*1024)} MB)")
+        Log.d(TAG, "✅ Found model: ${modelFile.name} (${modelFile.length() / (1024*1024)} MB)")
         
-        // Look for tokenizer files
+        // Check tokenizer directory
+        Log.d(TAG, "Tokenizer dir exists: ${tokenizerDir.exists()}")
         var tokenizerFile: File? = null
         
         if (tokenizerDir.exists()) {
-            // Common tokenizer file names
-            val tokenizerCandidates = listOf(
-                "tokenizer.json",
-                "tokenizer.model",
-                "vocab.json",
-                "merges.txt",
-                "tokenizer_config.json"
-            )
-            
-            // First try common names
-            for (name in tokenizerCandidates) {
-                val file = File(tokenizerDir, name)
-                if (file.exists()) {
-                    tokenizerFile = file
-                    Log.d(TAG, "Found tokenizer: ${file.name}")
-                    break
-                }
-            }
-            
-            // If not found, take any json or model file
-            if (tokenizerFile == null) {
-                val jsonFiles = tokenizerDir.listFiles { file -> 
-                    file.extension.equals("json", ignoreCase = true) ||
-                    file.extension.equals("model", ignoreCase = true)
-                }
-                if (!jsonFiles.isNullOrEmpty()) {
-                    tokenizerFile = jsonFiles[0]
-                    Log.d(TAG, "Found tokenizer: ${tokenizerFile?.name}")
+            Log.d(TAG, "Files in tokenizer directory:")
+            val tokenizerFiles = tokenizerDir.listFiles()
+            if (tokenizerFiles != null) {
+                tokenizerFiles.forEach { file ->
+                    Log.d(TAG, "  📄 ${file.name} (${file.length()} bytes)")
+                    if (file.extension.equals("json", ignoreCase = true)) {
+                        tokenizerFile = file
+                    }
                 }
             }
         }
         
         val modelName = modelFile.nameWithoutExtension
+        Log.d(TAG, "=== DETECTION COMPLETE ===")
+        Log.d(TAG, "Model ready: ${modelFile.exists() && modelFile.length() > 0}")
+        Log.d(TAG, "Tokenizer ready: ${tokenizerFile?.exists() == true}")
+        
         return ModelFiles(modelFile, tokenizerFile, modelName)
     }
     
     fun isModelReady(context: Context): Boolean {
-        val modelFiles = detectModelFiles(context)
-        val ready = modelFiles != null && modelFiles.modelFile.exists() && modelFiles.modelFile.length() > 0
-        Log.d(TAG, "Model ready: $ready")
-        return ready
+        val files = detectModelFiles(context)
+        return files != null && files.modelFile.exists() && files.modelFile.length() > 0
     }
     
     fun getModelFile(context: Context): File? {
@@ -134,33 +138,7 @@ object FileHelper {
         return detectModelFiles(context)?.modelName ?: "Unknown Model"
     }
     
-    fun getModelSize(context: Context): Long {
-        return getModelFile(context)?.length() ?: 0
-    }
-    
     fun getExternalDisplayPath(context: Context): String {
         return "/storage/emulated/0/Android/data/${context.packageName}/files/${Constants.AURA_DIR}"
-    }
-    
-    fun getFreeSpace(context: Context): Long {
-        return getAuraDirectory(context).freeSpace
-    }
-    
-    fun listModelFiles(context: Context): List<File> {
-        val modelsDir = getModelsDirectory(context)
-        return if (modelsDir.exists()) {
-            modelsDir.listFiles()?.filter { it.isFile } ?: emptyList()
-        } else {
-            emptyList()
-        }
-    }
-    
-    fun listTokenizerFiles(context: Context): List<File> {
-        val tokenizerDir = getTokenizerDirectory(context)
-        return if (tokenizerDir.exists()) {
-            tokenizerDir.listFiles()?.filter { it.isFile } ?: emptyList()
-        } else {
-            emptyList()
-        }
     }
 }
