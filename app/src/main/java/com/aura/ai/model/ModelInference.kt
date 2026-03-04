@@ -21,6 +21,7 @@ class ModelInference(
     private val temperature = 0.7f
     private val topK = 50
     private val topP = 0.9f
+    private val eosTokenId = 2L // Common EOS token ID
     
     // Cache input/output names
     private val inputNames: List<String>
@@ -48,14 +49,14 @@ class ModelInference(
             val allTokens = inputTokens.toMutableList()
             
             for (i in 0 until maxNewTokens) {
-                // Prepare input for current step
-                val currentInput = allTokens.takeLast(maxLength).toLongArray()
+                // Prepare input for current step - FIXED: Convert List<Int> to LongArray properly
+                val currentInput = allTokens.takeLast(maxLength).map { it.toLong() }.toLongArray()
                 
                 // Run inference
                 val nextToken = runInferenceStep(currentInput, doSample)
                 
-                // Stop if we hit EOS token (usually 2)
-                if (nextToken == 2) break
+                // FIXED: Compare Long with Long properly
+                if (nextToken == eosTokenId) break
                 
                 allTokens.add(nextToken.toInt())
             }
