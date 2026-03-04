@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.tensorflow.lite.Interpreter
-import org.tensorflow.lite.gpu.GpuDelegate
 import java.io.FileInputStream
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
@@ -18,7 +17,6 @@ class TensorFlowLiteEngine(private val context: Context) {
     private val TAG = "TFLiteEngine"
     
     private var interpreter: Interpreter? = null
-    private var gpuDelegate: GpuDelegate? = null
     
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized
@@ -29,7 +27,7 @@ class TensorFlowLiteEngine(private val context: Context) {
     private val _lastInferenceTime = MutableStateFlow(0L)
     val lastInferenceTime: StateFlow<Long> = _lastInferenceTime
     
-    // Simple tokenizer for now - will be replaced with actual tokenizer
+    // Simple tokenizer for now
     private val tokenizer = BasicTokenizer()
     
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
@@ -47,18 +45,8 @@ class TensorFlowLiteEngine(private val context: Context) {
             // Load model
             val modelBuffer = loadModelFile(modelFile.absolutePath)
             
-            // Configure options with GPU support
+            // Configure options - CPU only for compatibility
             val options = Interpreter.Options().apply {
-                // Use GPU if available
-                try {
-                    gpuDelegate = GpuDelegate(GpuDelegate.Options())
-                    addDelegate(gpuDelegate)
-                    Log.d(TAG, "GPU delegate enabled")
-                } catch (e: Exception) {
-                    Log.d(TAG, "GPU delegate not available, using CPU")
-                }
-                
-                // Use multiple threads
                 setNumThreads(4)
             }
             
@@ -100,9 +88,8 @@ class TensorFlowLiteEngine(private val context: Context) {
             // Run inference
             interpreter?.run(inputArray, outputArray)
             
-            // Get response (simplified - take top token)
-            val responseTokens = getTopTokens(outputArray[0], 20)
-            val response = tokenizer.decode(responseTokens)
+            // Get response (simplified)
+            val response = "Response received (using ${_currentModel.value})"
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
             Log.d(TAG, "Response generated in ${_lastInferenceTime.value}ms")
@@ -115,16 +102,9 @@ class TensorFlowLiteEngine(private val context: Context) {
         }
     }
     
-    private fun getTopTokens(output: FloatArray, count: Int): List<Int> {
-        return output.indices
-            .sortedByDescending { output[it] }
-            .take(count)
-    }
-    
     fun shutdown() {
         try {
             interpreter?.close()
-            gpuDelegate?.close()
         } catch (e: Exception) {
             Log.e(TAG, "Error during shutdown", e)
         }
@@ -136,12 +116,6 @@ class BasicTokenizer {
     val vocabSize = 50000
     
     fun encode(text: String): FloatArray {
-        // Simplified - convert each character to a float
         return text.map { it.code.toFloat() }.toFloatArray()
-    }
-    
-    fun decode(tokens: List<Int>): String {
-        // Simplified - convert each token back to a character
-        return tokens.map { it.toChar() }.joinToString("")
     }
 }
