@@ -64,7 +64,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.0")
     
-    // Compose
+    // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2023.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -74,28 +74,26 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.navigation:navigation-compose:2.7.5")
     
-    // Room
+    // Room Database
     implementation("androidx.room:room-runtime:2.6.0")
     implementation("androidx.room:room-ktx:2.6.0")
     kapt("androidx.room:room-compiler:2.6.0")
     
-    // REMOVE ONNX RUNTIME
-    // implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.1")
-    
-    // ADD TENSORFLOW LITE
+    // TensorFlow Lite - Core
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
     
-    // MediaPipe for easier LLM support (optional but recommended)
-    implementation("com.google.mediapipe:tasks-genai:0.10.0")
+    // TensorFlow Lite - GPU Acceleration (optional)
+    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
+    
+    // TensorFlow Lite - Select TF ops (for compatibility)
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     
-    // Accompanist
+    // Accompanist for permissions
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
     
     // Testing
