@@ -102,7 +102,7 @@ class MainActivity : ComponentActivity() {
         if (isReady) {
             showToast("✅ Model loaded successfully!")
         } else {
-            showToast("⚠️ Models not found. Please check the setup screen.")
+            showToast("⚠️ Models not found. Please download or add model files.")
         }
     }
 }
@@ -116,7 +116,10 @@ fun AuraApp() {
     LaunchedEffect(Unit) {
         delay(2000)
         val isModelReady = FileHelper.isModelReady(context)
-        startDestination = if (isModelReady) "chat" else "model_setup"
+        startDestination = when {
+            isModelReady -> "chat"
+            else -> "model_setup"
+        }
     }
     
     NavHost(
@@ -138,15 +141,33 @@ fun AuraApp() {
                 }
             )
         }
+        
         composable("model_setup") {
             ModelSetupScreen(
-                onModelLoaded = {
+                onScanPressed = {
                     navController.navigate("chat") {
                         popUpTo("model_setup") { inclusive = true }
                     }
+                },
+                onDownloadPressed = {
+                    navController.navigate("download")
                 }
             )
         }
+        
+        composable("download") {
+            DownloadScreen(
+                onDownloadComplete = {
+                    navController.navigate("chat") {
+                        popUpTo("download") { inclusive = true }
+                    }
+                },
+                onBackPressed = {
+                    navController.popBackStack()
+                }
+            )
+        }
+        
         composable("chat") {
             ChatScreen(
                 onNavigateToSettings = {
@@ -157,6 +178,7 @@ fun AuraApp() {
                 }
             )
         }
+        
         composable("settings") {
             SettingsScreen(
                 onBackPressed = {
@@ -169,6 +191,7 @@ fun AuraApp() {
                 }
             )
         }
+        
         composable("conversations") {
             ConversationsScreen(
                 onConversationSelected = { conversationId ->
