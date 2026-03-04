@@ -15,4 +15,4 @@ val PremiumCardBackground = Color(0xFF2D2D2D) // Card background
 val PremiumUserBubble = PremiumPrimary
 val PremiumAIBubble = Color(0xFF2A2A2A)
 val PremiumError = Color(0xFFCF6679)
-val PremiumSuccess = Color(0xFF4CAF50)
+val PremiumSuccess = Color(0xFF4CAF50)        // Added missing reference
