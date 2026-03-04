@@ -22,7 +22,6 @@ fun DownloadScreen(
     var downloadProgress by remember { mutableStateOf(0) }
     var downloadStatus by remember { mutableStateOf("") }
     
-    // Collect states from downloader
     LaunchedEffect(downloader) {
         downloader.isDownloading.collect { isDownloading = it }
         downloader.downloadProgress.collect { downloadProgress = it }
@@ -61,16 +60,16 @@ fun DownloadScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    "✅ FIXED: 125M Model (88 MB)",
+                    "Model: MobileLLM-125M (TensorFlow Lite)",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "Model: MobileLLM-125M Q4F16",
+                    "Size: 125 MB",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    "Size: 88 MB",
+                    "Format: TFLite (optimized for mobile)",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
@@ -124,14 +123,14 @@ fun DownloadScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Start Download (88 MB)")
+                Text("Start Download (125 MB)")
             }
         }
         
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Smaller model = faster download and better performance!",
+            "TensorFlow Lite provides faster, more reliable performance!",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
