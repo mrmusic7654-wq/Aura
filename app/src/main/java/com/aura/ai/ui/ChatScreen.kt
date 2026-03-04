@@ -1,27 +1,40 @@
 package com.aura.ai.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import com.aura.ai.ui.theme.PremiumGradient1
+import com.aura.ai.ui.theme.PremiumGradient2
+import com.aura.ai.ui.theme.PremiumGradient3
+import com.aura.ai.ui.theme.PremiumPrimary
+import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun ChatScreen(
     onNavigateToSettings: () -> Unit,
@@ -32,141 +45,388 @@ fun ChatScreen(
 ) {
     val messages by viewModel.messages.collectAsState()
     val isTyping by viewModel.isTyping.collectAsState()
+    val showDeleteConfirmation by viewModel.showDeleteConfirmation.collectAsState()
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     
+    // Gradient background
+    val gradientBrush = Brush.linearGradient(
+        colors = listOf(PremiumGradient1, PremiumGradient2, PremiumGradient3),
+        start = Offset(0f, 0f),
+        end = Offset(1000f, 1000f)
+    )
+    
+    // Auto-scroll to bottom
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
     
-    Column(
+    // Delete confirmation dialog
+    if (showDeleteConfirmation) {
+        PremiumDeleteDialog(
+            onConfirm = { viewModel.confirmDelete(true) },
+            onDismiss = { viewModel.confirmDelete(false) }
+        )
+    }
+    
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(gradientBrush.copy(alpha = 0.05f))
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text(
-                "Aura AI",
-                style = MaterialTheme.typography.headlineSmall
+            // Premium Header
+            PremiumHeader(
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToConversations = onNavigateToConversations
             )
-            Row {
-                IconButton(onClick = onNavigateToConversations) {
-                    Icon(Icons.Default.History, contentDescription = "History")
-                }
-                IconButton(onClick = onNavigateToSettings) {
-                    Icon(Icons.Default.Settings, contentDescription = "Settings")
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(messages) { message ->
-                MessageBubble(message)
-            }
             
-            if (isTyping) {
-                item {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text(
-                            "Aura is typing...",
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { inputText = it },
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Messages List
+            LazyColumn(
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message or command...") },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        if (inputText.isNotBlank()) {
-                            viewModel.sendMessage(inputText)
-                            inputText = ""
-                        }
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(messages) { message ->
+                    PremiumMessageBubble(message)
+                }
+                
+                if (isTyping) {
+                    item {
+                        PremiumTypingIndicator()
                     }
-                ),
-                maxLines = 5
-            )
+                }
+            }
             
-            FloatingActionButton(
-                onClick = {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Premium Input Field
+            PremiumInputField(
+                inputText = inputText,
+                onInputChange = { inputText = it },
+                onSendClick = {
                     if (inputText.isNotBlank()) {
                         viewModel.sendMessage(inputText)
                         inputText = ""
                     }
-                },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Send, contentDescription = "Send")
-            }
+                }
+            )
         }
     }
 }
 
 @Composable
-fun MessageBubble(message: ChatMessage) {
+fun PremiumHeader(
+    onNavigateToSettings: () -> Unit,
+    onNavigateToConversations: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isUser) 
-            Arrangement.End else Arrangement.Start
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Animated Logo
+        var animation by remember { mutableStateOf(0f) }
+        LaunchedEffect(Unit) {
+            while(true) {
+                animation = 0f
+                delay(2000)
+                animation = 1f
+                delay(2000)
+            }
+        }
+        
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(PremiumGradient1, PremiumGradient2)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "A",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Text(
+                "Aura AI",
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+        }
+        
+        Row {
+            // Premium Icon Buttons
+            PremiumIconButton(
+                icon = Icons.Default.History,
+                onClick = onNavigateToConversations
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            PremiumIconButton(
+                icon = Icons.Default.Settings,
+                onClick = onNavigateToSettings
+            )
+        }
+    }
+}
+
+@Composable
+fun PremiumIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f))
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+fun PremiumMessageBubble(message: ChatMessage) {
+    val isUser = message.isUser
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
         Surface(
-            color = when {
-                message.isUser -> MaterialTheme.colorScheme.primary
-                message.isCommand -> MaterialTheme.colorScheme.secondary
-                else -> MaterialTheme.colorScheme.surfaceVariant
-            },
-            shape = MaterialTheme.shapes.medium,
-            tonalElevation = 1.dp
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(
+                        topStart = 16.dp,
+                        topEnd = 16.dp,
+                        bottomStart = if (isUser) 16.dp else 4.dp,
+                        bottomEnd = if (isUser) 4.dp else 16.dp
+                    )
+                ),
+            color = if (isUser) PremiumPrimary else MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isUser) 16.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 16.dp
+            )
         ) {
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
                 Text(
                     text = message.content,
-                    color = if (message.isUser) 
-                        MaterialTheme.colorScheme.onPrimary 
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                    lineHeight = 20.sp
                 )
+                
                 if (message.isCommand && message.commandExecuted) {
-                    Text(
-                        text = "✓ Command executed",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (message.isUser) 
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = if (isUser) Color.White.copy(alpha = 0.7f) 
+                                   else PremiumSuccess
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Executed",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isUser) Color.White.copy(alpha = 0.7f) 
+                                   else PremiumSuccess
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumTypingIndicator() {
+    Row(
+        modifier = Modifier
+            .padding(8.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        repeat(3) { index ->
+            val delay = index * 200
+            var scale by remember { mutableStateOf(1f) }
+            
+            LaunchedEffect(Unit) {
+                while(true) {
+                    delay(delay.toLong())
+                    scale = 1.2f
+                    delay(400)
+                    scale = 1f
+                }
+            }
+            
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(PremiumPrimary.copy(alpha = 0.5f))
+                    .graphicsLayer { scaleX = scale; scaleY = scale }
+            )
+            
+            if (index < 2) {
+                Spacer(modifier = Modifier.width(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumInputField(
+    inputText: String,
+    onInputChange: (String) -> Unit,
+    onSendClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Attachment button
+            PremiumIconButton(
+                icon = Icons.Default.Add,
+                onClick = { /* TODO: Attachments */ }
+            )
+            
+            // Text field
+            BasicTextField(
+                value = inputText,
+                onValueChange = onInputChange,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                decorationBox = { innerTextField ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (inputText.isEmpty()) {
+                                Text(
+                                    "Type a message...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                }
+            )
+            
+            // Send button
+            if (inputText.isNotBlank()) {
+                FloatingActionButton(
+                    onClick = onSendClick,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .shadow(16.dp, CircleShape),
+                    containerColor = PremiumPrimary,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        Icons.Default.Send,
+                        contentDescription = "Send",
+                        tint = Color.White
                     )
                 }
             }
         }
     }
+}
+
+@Composable
+fun PremiumDeleteDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = PremiumError,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Confirm Delete",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Text(
+                "Are you sure you want to delete these files? This action cannot be undone.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PremiumError
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Delete", color = Color.White)
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
