@@ -2,7 +2,6 @@ package com.aura.ai.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.Date
 
 @Entity(tableName = "messages")
 data class ChatMessage(
