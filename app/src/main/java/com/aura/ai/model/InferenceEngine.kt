@@ -46,14 +46,15 @@ class InferenceEngine(private val context: Context) {
             // Initialize ONNX Runtime environment
             ortEnvironment = OrtEnvironment.getEnvironment()
             
-            // Create session options with FULL optimizations
+            // Create session options with proper optimizations for v1.17.1
             val sessionOptions = SessionOptions().apply {
                 // Set thread count for mobile CPU
                 setIntraOpNumThreads(4)
                 setInterOpNumThreads(4)
                 
-                // ✅ THIS IS THE CORRECT ENUM FOR YOUR VERSION
-                setOptimizationLevel(SessionOptions.OptLevel.ALL_OPTIMIZATIONS)
+                // FOR ONNX RUNTIME 1.17.1 - The correct enum is ALL_OPTIMIZATIONS
+                // But we need to access it differently
+                setOptimizationLevel(SessionOptions.OptLevel.values()[2]) // 2 = ALL_OPTIMIZATIONS
                 
                 // Enable XNNPACK for ARM CPU acceleration
                 try {
