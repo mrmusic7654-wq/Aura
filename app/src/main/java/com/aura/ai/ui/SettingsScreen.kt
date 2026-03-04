@@ -36,6 +36,10 @@ fun SettingsScreen(
     
     var modelInfo by remember { mutableStateOf(app.modelManager.getModelInfo()) }
     
+    LaunchedEffect(Unit) {
+        modelInfo = app.modelManager.getModelInfo()
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -76,17 +80,19 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         
                         Text(
-                            "Status: ${if (modelInfo["isLoaded"] == true) "Loaded" else "Not Loaded"}",
+                            "Model: ${app.modelManager.modelName.value}",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        
                         Text(
-                            "Model Size: ${modelInfo["modelSizeMB"]} MB",
+                            "Status: ${if (modelInfo["isLoaded"] == true) "✅ Loaded" else "❌ Not Loaded"}",
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        
                         Text(
-                            "Model Path: ${modelInfo["modelPath"]}",
+                            "Size: ${modelInfo["modelSizeMB"]} MB",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            "Path: ${modelInfo["modelPath"]}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         
