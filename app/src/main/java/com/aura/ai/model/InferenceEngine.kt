@@ -52,17 +52,18 @@ class InferenceEngine(private val context: Context) {
                 setIntraOpNumThreads(4)
                 setInterOpNumThreads(4)
                 
-                // Enable all graph optimizations
-                setOptimizationLevel(SessionOptions.OptLevel.ALL)
+                // Enable all graph optimizations - using the correct constant
+                // In ONNX Runtime, the optimization level enum is nested inside SessionOptions
+                setOptimizationLevel(99) // 99 corresponds to ALL optimizations level
                 
                 // Enable XNNPACK for ARM CPU acceleration
                 // Pass empty map for default options
                 addXnnpack(emptyMap())
                 
-                // Optional: Enable other providers if available
+                // Optional: Enable NNAPI for hardware acceleration if available
                 try {
-                    // Try to enable NNAPI for hardware acceleration
                     addNnapi()
+                    Log.d(TAG, "NNAPI enabled")
                 } catch (e: Exception) {
                     Log.d(TAG, "NNAPI not available, using CPU only")
                 }
@@ -70,8 +71,11 @@ class InferenceEngine(private val context: Context) {
                 // Set memory pattern optimization
                 setMemoryPatternOptimization(true)
                 
-                // Enable CPU memory arena
+                // Enable CPU memory arena for better performance
                 setCPUArenaAllocator(true)
+                
+                // Enable parallel execution
+                setExecutionMode(SessionOptions.ExecutionMode.PARALLEL)
             }
             
             // Create the session
@@ -82,7 +86,7 @@ class InferenceEngine(private val context: Context) {
                 return@withContext false
             }
             
-            // Get model info
+            // Get model info for debugging
             val inputInfo = ortSession?.inputInfo
             val outputInfo = ortSession?.outputInfo
             
