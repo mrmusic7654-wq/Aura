@@ -3,10 +3,9 @@ package com.aura.ai.model
 import android.content.Context
 import android.util.Log
 import com.aura.ai.utils.FileHelper
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.withContext
+import java.io.File
 
 class ModelManager(private val context: Context) {
     
@@ -16,32 +15,33 @@ class ModelManager(private val context: Context) {
     private val _modelPath = MutableStateFlow<String?>(null)
     val modelPath: StateFlow<String?> = _modelPath
     
-    private val _tokenizerPath = MutableStateFlow<String?>(null)
-    val tokenizerPath: StateFlow<String?> = _tokenizerPath
-    
     private val _modelName = MutableStateFlow("")
     val modelName: StateFlow<String> = _modelName
     
-    private val _modelSize = MutableStateFlow(0L)
-    val modelSize: StateFlow<Long> = _modelSize
-    
-    suspend fun scanForModel(): Boolean = withContext(Dispatchers.IO) {
-        val modelFiles = FileHelper.detectModelFiles(context)
+    fun scanForModel(): Boolean {
+        val modelsDir = FileHelper.getModelsDirectory(context)
         
-        if (modelFiles != null) {
-            _modelPath.value = modelFiles.modelFile.absolutePath
-            _tokenizerPath.value = modelFiles.tokenizerFile?.absolutePath
-            _modelName.value = modelFiles.modelName
-            _modelSize.value = modelFiles.modelFile.length()
+        if (!modelsDir.exists()) {
+            Log.d("ModelManager", "Models directory doesn't exist")
+            return false
+        }
+        
+        // Look for .tflite files (instead of .onnx)
+        val tfliteFiles = modelsDir.listFiles { file -> 
+            file.extension.equals("tflite", ignoreCase = true) 
+        }
+        
+        val modelFile = tfliteFiles?.firstOrNull()
+        
+        return if (modelFile != null && modelFile.exists()) {
+            _modelPath.value = modelFile.absolutePath
+            _modelName.value = modelFile.nameWithoutExtension
             _isModelLoaded.value = true
-            
-            Log.d("ModelManager", "✅ Loaded model: ${modelFiles.modelName}")
-            Log.d("ModelManager", "   Size: ${modelFiles.modelFile.length() / (1024*1024)} MB")
-            Log.d("ModelManager", "   Tokenizer: ${modelFiles.tokenizerFile?.name ?: "None"}")
+            Log.d("ModelManager", "✅ Found TFLite model: ${modelFile.name}")
             true
         } else {
             _isModelLoaded.value = false
-            Log.d("ModelManager", "❌ No model found")
+            Log.d("ModelManager", "❌ No TFLite model found")
             false
         }
     }
@@ -50,9 +50,7 @@ class ModelManager(private val context: Context) {
         return mapOf(
             "isLoaded" to _isModelLoaded.value,
             "modelName" to _modelName.value,
-            "modelPath" to (_modelPath.value ?: "Not found"),
-            "modelSize" to _modelSize.value,
-            "modelSizeMB" to (_modelSize.value / (1024 * 1024))
+            "modelPath" to (_modelPath.value ?: "Not found")
         )
     }
 }
