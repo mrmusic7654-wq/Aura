@@ -79,15 +79,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.0")
     kapt("androidx.room:room-compiler:2.6.0")
     
-    // TensorFlow Lite - Core
+    // TensorFlow Lite - Core ONLY (removed GPU and extras)
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    
-    // TensorFlow Lite - GPU Acceleration (optional)
-    implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
-    
-    // TensorFlow Lite - Select TF ops (for compatibility)
-    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
     
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
