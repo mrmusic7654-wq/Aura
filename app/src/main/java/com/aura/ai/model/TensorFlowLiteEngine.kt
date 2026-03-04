@@ -27,9 +27,6 @@ class TensorFlowLiteEngine(private val context: Context) {
     private val _lastInferenceTime = MutableStateFlow(0L)
     val lastInferenceTime: StateFlow<Long> = _lastInferenceTime
     
-    // Simple tokenizer for now
-    private val tokenizer = BasicTokenizer()
-    
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             val modelFile = FileHelper.getModelFile(context)
@@ -45,7 +42,7 @@ class TensorFlowLiteEngine(private val context: Context) {
             // Load model
             val modelBuffer = loadModelFile(modelFile.absolutePath)
             
-            // Configure options - CPU only for compatibility
+            // Simple CPU-only configuration
             val options = Interpreter.Options().apply {
                 setNumThreads(4)
             }
@@ -78,18 +75,15 @@ class TensorFlowLiteEngine(private val context: Context) {
             
             Log.d(TAG, "Generating response for: $prompt")
             
-            // Tokenize input
-            val inputTokens = tokenizer.encode(prompt)
-            
-            // Prepare input tensor
-            val inputArray = arrayOf(inputTokens)
-            val outputArray = Array(1) { FloatArray(tokenizer.vocabSize) }
-            
-            // Run inference
-            interpreter?.run(inputArray, outputArray)
-            
-            // Get response (simplified)
-            val response = "Response received (using ${_currentModel.value})"
+            // Simple placeholder response - will be replaced with actual inference
+            val response = when {
+                prompt.contains("hello", ignoreCase = true) -> 
+                    "Hello! I'm running on ${_currentModel.value}. How can I help?"
+                prompt.contains("how are you", ignoreCase = true) ->
+                    "I'm working great! Ready to assist."
+                else ->
+                    "You said: '$prompt' (using ${_currentModel.value})"
+            }
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
             Log.d(TAG, "Response generated in ${_lastInferenceTime.value}ms")
@@ -108,14 +102,5 @@ class TensorFlowLiteEngine(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error during shutdown", e)
         }
-    }
-}
-
-// Simple tokenizer - replace with actual tokenizer.json
-class BasicTokenizer {
-    val vocabSize = 50000
-    
-    fun encode(text: String): FloatArray {
-        return text.map { it.code.toFloat() }.toFloatArray()
     }
 }
