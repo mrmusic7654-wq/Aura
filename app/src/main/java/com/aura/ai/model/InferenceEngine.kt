@@ -19,6 +19,7 @@ class InferenceEngine(private val context: Context) {
     
     private var ortEnvironment: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
+    private val executor = Executors.newSingleThreadExecutor()
     
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized
@@ -31,27 +32,70 @@ class InferenceEngine(private val context: Context) {
     
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
-            val modelFile = FileHelper.getModelFile(context) ?: return@withContext false
+            val modelFile = FileHelper.getModelFile(context)
+            if (modelFile == null) {
+                Log.e(TAG, "No model file found")
+                return@withContext false
+            }
+            
             val modelName = FileHelper.getModelName(context)
             
             Log.d(TAG, "Loading model: ${modelFile.absolutePath}")
+            Log.d(TAG, "Model size: ${modelFile.length() / (1024 * 1024)} MB")
             
-            // Initialize ONNX Runtime
+            // Initialize ONNX Runtime environment
             ortEnvironment = OrtEnvironment.getEnvironment()
             
+            // Create session options with mobile optimizations
             val sessionOptions = SessionOptions().apply {
+                // Set thread count for mobile CPU (4 is optimal for most phones)
                 setIntraOpNumThreads(4)
-                setOptimizationLevel(SessionOptions.OptLevel.ALL_OPTIMIZATIONS)
-                addXnnpack("") // Enable XNNPACK for ARM CPUs
+                setInterOpNumThreads(4)
+                
+                // Enable all graph optimizations
+                setOptimizationLevel(SessionOptions.OptLevel.ALL)
+                
+                // Enable XNNPACK for ARM CPU acceleration
+                // Pass empty map for default options
+                addXnnpack(emptyMap())
+                
+                // Optional: Enable other providers if available
+                try {
+                    // Try to enable NNAPI for hardware acceleration
+                    addNnapi()
+                } catch (e: Exception) {
+                    Log.d(TAG, "NNAPI not available, using CPU only")
+                }
+                
+                // Set memory pattern optimization
+                setMemoryPatternOptimization(true)
+                
+                // Enable CPU memory arena
+                setCPUArenaAllocator(true)
             }
             
+            // Create the session
             ortSession = ortEnvironment?.createSession(modelFile.absolutePath, sessionOptions)
+            
+            if (ortSession == null) {
+                Log.e(TAG, "Failed to create session")
+                return@withContext false
+            }
+            
+            // Get model info
+            val inputInfo = ortSession?.inputInfo
+            val outputInfo = ortSession?.outputInfo
+            
+            Log.d(TAG, "Model loaded successfully:")
+            Log.d(TAG, "  Inputs: ${inputInfo?.size}")
+            Log.d(TAG, "  Outputs: ${outputInfo?.size}")
             
             _currentModel.value = modelName
             _isInitialized.value = true
             
-            Log.d(TAG, "✅ Model initialized successfully")
+            Log.d(TAG, "✅ Model initialized: $modelName")
             true
+            
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize model", e)
             false
@@ -64,39 +108,48 @@ class InferenceEngine(private val context: Context) {
         try {
             // Check if model is initialized
             if (!_isInitialized.value) {
-                return@withContext "Model not initialized yet. Please wait."
+                return@withContext "⚠️ Model not initialized yet. Please wait or check your model files."
             }
             
             if (ortSession == null) {
-                return@withContext "Model session not available."
+                return@withContext "⚠️ Model session not available."
             }
             
             Log.d(TAG, "Generating response for: $prompt")
             
-            // TODO: Actual inference with the model
-            // This is where you would:
-            // 1. Tokenize the input
-            // 2. Run inference
-            // 3. Decode the output
+            // TODO: Implement actual inference with tokenization
+            // This is a placeholder until you implement the full pipeline
             
-            // FOR NOW - return a simple response to test
+            // For now, return a contextual response based on the prompt
             val response = when {
-                prompt.contains("hello", ignoreCase = true) -> 
-                    "Hello! I'm running on ${_currentModel.value}. How can I help?"
+                prompt.contains("hello", ignoreCase = true) || prompt.contains("hi", ignoreCase = true) ->
+                    "Hello! I'm running on ${_currentModel.value}. How can I help you today?"
                     
-                prompt.contains("how are you", ignoreCase = true) -> 
-                    "I'm working great! Ready to assist you."
+                prompt.contains("how are you", ignoreCase = true) ->
+                    "I'm functioning optimally! Ready to assist you with any task."
                     
-                prompt.contains("what model", ignoreCase = true) -> 
-                    "I'm using ${_currentModel.value} which is auto-detected from your models folder."
+                prompt.contains("what model", ignoreCase = true) ->
+                    "I'm using ${_currentModel.value}, which was auto-detected from your models folder."
                     
-                prompt.contains("what can you do", ignoreCase = true) -> 
+                prompt.contains("what can you do", ignoreCase = true) ->
                     "I can chat with you, answer questions, and control your device - all offline!"
                     
-                prompt.contains("help", ignoreCase = true) -> 
+                prompt.contains("help", ignoreCase = true) ->
                     "Try commands like 'open Chrome', 'search for cats', or just chat with me!"
                     
-                else -> "I received: '$prompt'. (Running on ${_currentModel.value})"
+                prompt.contains("open", ignoreCase = true) ->
+                    "I'll help you open an app. Which app would you like to open?"
+                    
+                prompt.contains("search", ignoreCase = true) ->
+                    "I'll search for that. What would you like me to search for?"
+                    
+                prompt.contains("scroll", ignoreCase = true) ->
+                    "I can scroll for you. Which direction (up/down)?"
+                    
+                else -> {
+                    // Generate a simple response
+                    "I received: '$prompt'. (Running on ${_currentModel.value})"
+                }
             }
             
             _lastInferenceTime.value = System.currentTimeMillis() - startTime
@@ -106,16 +159,48 @@ class InferenceEngine(private val context: Context) {
             
         } catch (e: Exception) {
             Log.e(TAG, "Error generating response", e)
-            return@withContext "Error: ${e.message}"
+            return@withContext "❌ Error: ${e.message}"
         }
     }
     
+    // Get model metadata
+    fun getModelInfo(): Map<String, Any> {
+        return mapOf(
+            "initialized" to _isInitialized.value,
+            "modelName" to _currentModel.value,
+            "lastInferenceTimeMs" to _lastInferenceTime.value,
+            "maxSequenceLength" to Constants.MAX_SEQUENCE_LENGTH,
+            "sessionActive" to (ortSession != null)
+        )
+    }
+    
+    // Get input/output info
+    fun getModelMetadata(): Map<String, Any> {
+        val metadata = mutableMapOf<String, Any>()
+        
+        try {
+            ortSession?.let { session ->
+                metadata["inputCount"] = session.inputInfo.size
+                metadata["outputCount"] = session.outputInfo.size
+                metadata["inputNames"] = session.inputInfo.keys.joinToString()
+                metadata["outputNames"] = session.outputInfo.keys.joinToString()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting metadata", e)
+        }
+        
+        return metadata
+    }
+    
+    // Clean up resources
     fun shutdown() {
         try {
             ortSession?.close()
             // Don't close OrtEnvironment as it's a singleton
+            executor.shutdown()
+            Log.d(TAG, "Inference engine shutdown complete")
         } catch (e: Exception) {
-            Log.e(TAG, "Error shutting down", e)
+            Log.e(TAG, "Error during shutdown", e)
         }
     }
 }
