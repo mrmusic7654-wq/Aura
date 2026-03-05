@@ -13,10 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.aura.ai.AuraApplication
-import com.aura.ai.automation.AuraAccessibilityService
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.launch
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 
@@ -29,10 +27,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     val app = context.applicationContext as AuraApplication
     val scope = rememberCoroutineScope()
-    
-    var isAccessibilityEnabled by remember { 
-        mutableStateOf(checkAccessibilityServiceEnabled(context)) 
-    }
     
     var modelInfo by remember { mutableStateOf(app.modelManager.getModelInfo()) }
     
@@ -60,41 +54,19 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Info, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Model Information",
-                                style = MaterialTheme.typography.titleLarge
-                            )
+                            Text("Model Information", style = MaterialTheme.typography.titleLarge)
                         }
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        Text(
-                            "Model: ${app.modelManager.modelName.value}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Status: ${if (modelInfo["isLoaded"] == true) "✅ Loaded" else "❌ Not Loaded"}",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Size: ${modelInfo["modelSizeMB"]} MB",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            "Path: ${modelInfo["modelPath"]}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("Model: ${app.modelManager.modelName.value}")
+                        Text("Status: ${if (modelInfo["isLoaded"] == true) "✅ Loaded" else "❌ Not Loaded"}")
+                        Text("Path: ${modelInfo["modelPath"]}")
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
@@ -102,134 +74,43 @@ fun SettingsScreen(
                             onClick = onNavigateToModelSetup,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Change Model")
+                            Text("Model Setup")
                         }
                     }
                 }
             }
             
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Storage, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Storage",
-                                style = MaterialTheme.typography.titleLarge
-                            )
+                            Text("Storage", style = MaterialTheme.typography.titleLarge)
                         }
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        // ⬇️ THIS LINE IS NOW CORRECT ⬇️
-                        // The function getFreeSpace exists in the FileHelper above
-                        val freeSpaceBytes = FileHelper.getFreeSpace(context)
-                        val freeSpaceMB = freeSpaceBytes / (1024 * 1024)
-                        
-                        Text(
-                            "Free Space: $freeSpaceMB MB",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        
-                        Text(
-                            "Models Directory: ${FileHelper.getModelsDirectory(context).absolutePath}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                        Text("Models Directory: ${FileHelper.getModelsDirectory(context).absolutePath}")
                     }
                 }
             }
             
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            "Automation Settings",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Accessibility Service")
-                            Switch(
-                                checked = isAccessibilityEnabled,
-                                onCheckedChange = {
-                                    if (!isAccessibilityEnabled) {
-                                        context.startActivity(
-                                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                                        )
-                                    }
-                                }
-                            )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            // Clear all conversations
                         }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text(
-                            "Enable accessibility service to allow Aura to control your device",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
-            }
-            
-            item {
-                Card(
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            "Danger Zone",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Button(
-                            onClick = {
-                                scope.launch {
-                                    // Clear all conversations
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Clear All Chat History")
-                        }
-                    }
+                    Text("Clear All Chat History")
                 }
             }
         }
     }
-}
-
-private fun checkAccessibilityServiceEnabled(context: Context): Boolean {
-    val enabledServices = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-    )
-    return enabledServices?.contains(context.packageName + "/" + AuraAccessibilityService::class.java.name) == true
 }
