@@ -22,15 +22,9 @@ fun SplashScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            "AURA AI",
-            style = MaterialTheme.typography.displayLarge
-        )
+        Text("AURA AI", style = MaterialTheme.typography.displayLarge)
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            "Your Personal AI Assistant",
-            style = MaterialTheme.typography.titleLarge
-        )
+        Text("Your Personal AI Assistant")
         Spacer(modifier = Modifier.height(32.dp))
         CircularProgressIndicator()
     }
