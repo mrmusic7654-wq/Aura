@@ -12,7 +12,7 @@ object FileHelper {
     }
     
     fun getModelsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), "models")  // Both files go here
+        return File(getAuraDirectory(context), "models")
     }
     
     fun createAuraDirectory(context: Context): Boolean {
@@ -33,7 +33,6 @@ object FileHelper {
     
     fun isModelReady(context: Context): Boolean {
         val modelsDir = getModelsDirectory(context)
-        
         if (!modelsDir.exists()) return false
         
         val files = modelsDir.listFiles() ?: return false
