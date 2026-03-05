@@ -7,40 +7,23 @@ import java.io.File
 object FileHelper {
     private const val TAG = "FileHelper"
     
-    data class ModelFiles(
-        val modelFile: File,
-        val tokenizerFile: File?,
-        val modelName: String
-    )
-    
     fun getAuraDirectory(context: Context): File {
-        return File(context.getExternalFilesDir(null), Constants.AURA_DIR)
+        return File(context.getExternalFilesDir(null), "AuraAI")
     }
     
     fun getModelsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.MODELS_DIR)
-    }
-    
-    fun getTokenizerDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.TOKENIZER_DIR)
-    }
-    
-    fun getExportsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), Constants.EXPORT_DIR)
+        return File(getAuraDirectory(context), "models")  // Both files go here
     }
     
     fun createAuraDirectory(context: Context): Boolean {
         return try {
             val auraDir = getAuraDirectory(context)
             val modelsDir = getModelsDirectory(context)
-            val tokenizerDir = getTokenizerDirectory(context)
-            val exportsDir = getExportsDirectory(context)
             
             if (!auraDir.exists()) auraDir.mkdirs()
             if (!modelsDir.exists()) modelsDir.mkdirs()
-            if (!tokenizerDir.exists()) tokenizerDir.mkdirs()
-            if (!exportsDir.exists()) exportsDir.mkdirs()
             
+            Log.d(TAG, "Directory created: ${modelsDir.absolutePath}")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error creating directories", e)
@@ -48,56 +31,45 @@ object FileHelper {
         }
     }
     
-    fun detectModelFiles(context: Context): ModelFiles? {
-        val modelsDir = getModelsDirectory(context)
-        val tokenizerDir = getTokenizerDirectory(context)
-        
-        if (!modelsDir.exists()) return null
-        
-        val onnxFiles = modelsDir.listFiles { file -> 
-            file.extension.equals("onnx", ignoreCase = true) 
-        }
-        
-        if (onnxFiles.isNullOrEmpty()) return null
-        
-        val modelFile = onnxFiles[0]
-        
-        var tokenizerFile: File? = null
-        if (tokenizerDir.exists()) {
-            val jsonFiles = tokenizerDir.listFiles { file -> 
-                file.extension.equals("json", ignoreCase = true) 
-            }
-            if (!jsonFiles.isNullOrEmpty()) {
-                tokenizerFile = jsonFiles[0]
-            }
-        }
-        
-        val modelName = modelFile.nameWithoutExtension
-        return ModelFiles(modelFile, tokenizerFile, modelName)
-    }
-    
     fun isModelReady(context: Context): Boolean {
-        return detectModelFiles(context) != null
+        val modelsDir = getModelsDirectory(context)
+        
+        if (!modelsDir.exists()) return false
+        
+        val files = modelsDir.listFiles() ?: return false
+        
+        var hasModel = false
+        var hasTokenizer = false
+        
+        files.forEach { file ->
+            when {
+                file.extension.equals("tflite", ignoreCase = true) -> hasModel = true
+                file.extension.equals("json", ignoreCase = true) -> hasTokenizer = true
+            }
+        }
+        
+        return hasModel && hasTokenizer
     }
     
     fun getModelFile(context: Context): File? {
-        return detectModelFiles(context)?.modelFile
+        val modelsDir = getModelsDirectory(context)
+        return modelsDir.listFiles()?.firstOrNull { 
+            it.extension.equals("tflite", ignoreCase = true) 
+        }
     }
     
     fun getTokenizerFile(context: Context): File? {
-        return detectModelFiles(context)?.tokenizerFile
+        val modelsDir = getModelsDirectory(context)
+        return modelsDir.listFiles()?.firstOrNull { 
+            it.extension.equals("json", ignoreCase = true) 
+        }
     }
     
     fun getModelName(context: Context): String {
-        return detectModelFiles(context)?.modelName ?: "Unknown Model"
+        return getModelFile(context)?.nameWithoutExtension ?: "Unknown"
     }
     
     fun getExternalDisplayPath(context: Context): String {
-        return "/storage/emulated/0/Android/data/${context.packageName}/files/${Constants.AURA_DIR}"
-    }
-    
-    // ⬇️ THIS IS THE FUNCTION THAT WAS MISSING ⬇️
-    fun getFreeSpace(context: Context): Long {
-        return getAuraDirectory(context).freeSpace
+        return "/storage/emulated/0/Android/data/${context.packageName}/files/AuraAI/models"
     }
 }
