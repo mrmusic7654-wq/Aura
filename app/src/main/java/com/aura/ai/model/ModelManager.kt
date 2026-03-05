@@ -17,6 +17,8 @@ class ModelManager(private val context: Context) {
     private val _modelName = MutableStateFlow("")
     val modelName: StateFlow<String> = _modelName
     
+    private var gpt2Engine: GPT2Engine? = null
+    
     fun scanForModel(): Boolean {
         val modelsDir = FileHelper.getModelsDirectory(context)
         
@@ -30,32 +32,46 @@ class ModelManager(private val context: Context) {
         val files = modelsDir.listFiles() ?: return false
         
         var modelFile: java.io.File? = null
-        var tokenizerFile: java.io.File? = null
+        var vocabFile: java.io.File? = null
+        var mergesFile: java.io.File? = null
         
         files.forEach { file ->
             when {
-                file.extension.equals("tflite", ignoreCase = true) -> {
+                file.name.endsWith(".tflite") -> {
                     modelFile = file
                     Log.d("ModelManager", "Found model: ${file.name}")
                 }
-                file.extension.equals("json", ignoreCase = true) -> {
-                    tokenizerFile = file
-                    Log.d("ModelManager", "Found tokenizer: ${file.name}")
+                file.name.equals("vocab.json", ignoreCase = true) -> {
+                    vocabFile = file
+                    Log.d("ModelManager", "Found vocab: ${file.name}")
+                }
+                file.name.equals("merges.txt", ignoreCase = true) -> {
+                    mergesFile = file
+                    Log.d("ModelManager", "Found merges: ${file.name}")
                 }
             }
         }
         
-        return if (modelFile != null && tokenizerFile != null) {
+        return if (modelFile != null && vocabFile != null) {
             _modelPath.value = modelFile!!.absolutePath
             _modelName.value = modelFile!!.nameWithoutExtension
-            _isModelLoaded.value = true
-            Log.d("ModelManager", "✅ Both files found in same folder")
-            true
+            
+            // Initialize GPT2 engine
+            gpt2Engine = GPT2Engine(context)
+            val initialized = gpt2Engine!!.initialize(modelFile!!, vocabFile!!, mergesFile)
+            
+            _isModelLoaded.value = initialized
+            Log.d("ModelManager", "✅ Model loaded: $initialized")
+            initialized
         } else {
             _isModelLoaded.value = false
-            Log.e("ModelManager", "❌ Missing files. Need .tflite and .json in /models/")
+            Log.e("ModelManager", "❌ Missing files. Need .tflite and vocab.json")
             false
         }
+    }
+    
+    fun generateText(prompt: String): String {
+        return gpt2Engine?.generate(prompt) ?: "Model not initialized"
     }
     
     fun getModelInfo(): Map<String, Any> {
@@ -64,5 +80,9 @@ class ModelManager(private val context: Context) {
             "modelName" to _modelName.value,
             "modelPath" to (_modelPath.value ?: "Not found")
         )
+    }
+    
+    fun close() {
+        gpt2Engine?.close()
     }
 }
