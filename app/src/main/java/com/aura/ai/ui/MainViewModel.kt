@@ -87,7 +87,6 @@ class MainViewModel(
     
     fun sendMessage(content: String) {
         viewModelScope.launch {
-            // Save user message
             val userMessage = ChatMessage(
                 conversationId = currentConversationId,
                 content = content,
@@ -98,19 +97,16 @@ class MainViewModel(
             _isTyping.value = true
             
             try {
-                // Check if it's a command
                 val isCommand = isCommand(content)
                 
                 val response = if (isCommand) {
                     commandExecutor.executeCommand(content)
                 } else if (_isModelReady.value) {
-                    // Generate response from model
                     app.modelManager.generateText(content)
                 } else {
                     "Model not ready. Please check your files in:\n${FileHelper.getExternalDisplayPath(app)}"
                 }
                 
-                // Save AI response
                 val aiMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = response,
@@ -120,7 +116,6 @@ class MainViewModel(
                 )
                 chatDao.insertMessage(aiMessage)
                 
-                // Update conversation title if first message
                 if (_messages.value.size <= 2) {
                     val newTitle = content.take(30) + if (content.length > 30) "..." else ""
                     chatDao.getConversation(currentConversationId)?.let { conv ->
@@ -160,8 +155,8 @@ class MainViewModel(
     
     override fun onCleared() {
         super.onCleared()
-        // Only shutdown when ViewModel is cleared (app closing)
-        app.modelManager.close()
+        // FIXED: Changed from close() to shutdown()
+        app.modelManager.shutdown()
     }
 }
 
