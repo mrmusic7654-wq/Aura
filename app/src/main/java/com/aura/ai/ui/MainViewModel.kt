@@ -6,10 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
 import com.aura.ai.data.Conversation
-import com.aura.ai.model.TensorFlowLiteEngine
+import com.aura.ai.model.DistilGPTEngine
 import com.aura.ai.automation.CommandExecutor
-import com.aura.ai.automation.AuraAccessibilityService
 import com.aura.ai.utils.Constants
+import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import android.util.Log
@@ -20,15 +20,8 @@ class MainViewModel(
     
     private val TAG = "MainViewModel"
     private val chatDao = app.database.chatDao()
-    
-    // Using TensorFlowLiteEngine (fixed)
-    private val inferenceEngine = TensorFlowLiteEngine(app)
-    
-    private val commandExecutor = CommandExecutor(
-        app, 
-        app.deviceController,
-        null
-    )
+    private val inferenceEngine = DistilGPTEngine(app)
+    private val commandExecutor = CommandExecutor(app, app.deviceController)
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -39,14 +32,7 @@ class MainViewModel(
     private val _isModelReady = MutableStateFlow(false)
     val isModelReady: StateFlow<Boolean> = _isModelReady.asStateFlow()
     
-    private val _modelName = MutableStateFlow("")
-    val modelName: StateFlow<String> = _modelName.asStateFlow()
-    
-    private val _showDeleteConfirmation = MutableStateFlow(false)
-    val showDeleteConfirmation: StateFlow<Boolean> = _showDeleteConfirmation.asStateFlow()
-    
     private var currentConversationId: Long = 0
-    private var pendingDeleteCommand = ""
     
     init {
         viewModelScope.launch {
@@ -57,36 +43,28 @@ class MainViewModel(
     
     private suspend fun initializeModel() {
         try {
-            Log.d(TAG, "Initializing TFLite model...")
+            Log.d(TAG, "Initializing model...")
             
             val modelFound = app.modelManager.scanForModel()
             
             if (modelFound) {
-                _modelName.value = app.modelManager.modelName.value
-                
                 val initialized = inferenceEngine.initialize()
+                _isModelReady.value = initialized
                 
                 if (initialized) {
-                    _isModelReady.value = true
-                    Log.d(TAG, "✅ TFLite model ready: ${_modelName.value}")
-                    
+                    Log.d(TAG, "✅ Model ready")
                     val systemMessage = ChatMessage(
                         conversationId = currentConversationId,
-                        content = "✨ Aura AI is ready with ${_modelName.value}. How can I help?",
-                        isUser = false,
-                        isCommand = false
+                        content = "✅ Aura AI is ready!",
+                        isUser = false
                     )
                     chatDao.insertMessage(systemMessage)
-                } else {
-                    Log.e(TAG, "❌ Model initialization failed")
-                    showErrorMessage("Model initialization failed. Please check your model files.")
                 }
             } else {
-                Log.e(TAG, "❌ No model found")
-                showErrorMessage("No model found. Please download a model first.")
+                showErrorMessage("No model found. Place .tflite and tokenizer.json in:\n${FileHelper.getExternalDisplayPath(app)}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing model", e)
+            Log.e(TAG, "Error", e)
             showErrorMessage("Error: ${e.message}")
         }
     }
@@ -104,15 +82,13 @@ class MainViewModel(
         val errorMessage = ChatMessage(
             conversationId = currentConversationId,
             content = "⚠️ $message",
-            isUser = false,
-            isCommand = false
+            isUser = false
         )
         chatDao.insertMessage(errorMessage)
     }
     
     fun sendMessage(content: String) {
         viewModelScope.launch {
-            // Save user message
             val userMessage = ChatMessage(
                 conversationId = currentConversationId,
                 content = content,
@@ -123,26 +99,16 @@ class MainViewModel(
             _isTyping.value = true
             
             try {
-                // Check for dangerous commands first
-                if (content.contains("delete", ignoreCase = true) || 
-                    content.contains("remove", ignoreCase = true)) {
-                    pendingDeleteCommand = content
-                    _showDeleteConfirmation.value = true
-                    _isTyping.value = false
-                    return@launch
-                }
-                
-                // Check if it's a command
-                val isCommand = isCommand(content)
+                val isCommand = Constants.APP_OPEN_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
+                                Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
+                                Constants.HOME_COMMANDS.any { content.contains(it, ignoreCase = true) }
                 
                 val response = if (isCommand) {
                     commandExecutor.executeCommand(content)
+                } else if (_isModelReady.value) {
+                    inferenceEngine.generateResponse(content)
                 } else {
-                    if (_isModelReady.value) {
-                        inferenceEngine.generateResponse(content)
-                    } else {
-                        "Model is not ready yet. Please download a model first."
-                    }
+                    "Model not ready. Please check your files."
                 }
                 
                 val aiMessage = ChatMessage(
@@ -154,53 +120,18 @@ class MainViewModel(
                 )
                 chatDao.insertMessage(aiMessage)
                 
-                // Update conversation title if first message
-                if (_messages.value.size <= 2) {
-                    val newTitle = content.take(30) + if (content.length > 30) "..." else ""
-                    chatDao.getConversation(currentConversationId)?.let { conv ->
-                        chatDao.updateConversation(conv.copy(title = newTitle))
-                    }
-                }
-                
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing message", e)
-                
+                Log.e(TAG, "Error", e)
                 val errorMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = "❌ Error: ${e.message}",
-                    isUser = false,
-                    isCommand = false
+                    isUser = false
                 )
                 chatDao.insertMessage(errorMessage)
             } finally {
                 _isTyping.value = false
             }
         }
-    }
-    
-    fun confirmDelete(confirm: Boolean) {
-        viewModelScope.launch {
-            if (confirm) {
-                // Execute delete command
-                val response = commandExecutor.executeCommand(pendingDeleteCommand)
-                val aiMessage = ChatMessage(
-                    conversationId = currentConversationId,
-                    content = response,
-                    isUser = false,
-                    isCommand = true,
-                    commandExecuted = true
-                )
-                chatDao.insertMessage(aiMessage)
-            }
-            _showDeleteConfirmation.value = false
-            pendingDeleteCommand = ""
-        }
-    }
-    
-    private fun isCommand(content: String): Boolean {
-        return Constants.APP_OPEN_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.SCROLL_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) }
     }
     
     fun clearConversation() {
