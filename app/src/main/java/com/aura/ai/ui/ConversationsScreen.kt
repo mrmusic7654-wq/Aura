@@ -51,60 +51,41 @@ fun ConversationsScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text("No conversations yet", style = MaterialTheme.typography.bodyLarge)
+                Text("No conversations yet")
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(16.dp)
             ) {
                 items(conversations) { conversation ->
-                    ConversationItem(
-                        conversation = conversation,
-                        onItemClick = { onConversationSelected(conversation.id) },
-                        onDeleteClick = { viewModel.deleteConversation(conversation.id) },
-                        dateFormat = dateFormat
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(conversation.title, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "${conversation.messageCount} messages • ${dateFormat.format(Date(conversation.lastMessageTime))}",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            IconButton(onClick = { viewModel.deleteConversation(conversation.id) }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            }
+                        }
+                    }
                 }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ConversationItem(
-    conversation: Conversation,
-    onItemClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    dateFormat: SimpleDateFormat
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onItemClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = conversation.title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = "${conversation.messageCount} messages • ${dateFormat.format(Date(conversation.lastMessageTime))}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            IconButton(onClick = onDeleteClick) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
             }
         }
     }
