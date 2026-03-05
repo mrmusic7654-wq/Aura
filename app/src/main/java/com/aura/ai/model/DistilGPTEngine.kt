@@ -12,6 +12,8 @@ import java.io.FileInputStream
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.charset.StandardCharsets
+import java.nio.IntBuffer
+import java.nio.FloatBuffer
 import org.json.JSONObject
 
 class DistilGPTEngine(private val context: Context) {
@@ -65,9 +67,7 @@ class DistilGPTEngine(private val context: Context) {
             tokenizer = mutableMapOf()
             reverseTokenizer = mutableMapOf()
             
-            // Handle different tokenizer formats
             if (json.has("model") && json.getJSONObject("model").has("vocab")) {
-                // HuggingFace tokenizer.json format
                 val vocab = json.getJSONObject("model").getJSONObject("vocab")
                 val keys = vocab.keys()
                 while (keys.hasNext()) {
@@ -77,7 +77,6 @@ class DistilGPTEngine(private val context: Context) {
                     (reverseTokenizer as MutableMap)[id] = key
                 }
             } else if (json.has("vocab")) {
-                // Simple vocab.json format
                 val vocab = json.getJSONObject("vocab")
                 val keys = vocab.keys()
                 while (keys.hasNext()) {
@@ -87,7 +86,6 @@ class DistilGPTEngine(private val context: Context) {
                     (reverseTokenizer as MutableMap)[id] = key
                 }
             } else {
-                // Assume entire JSON is vocab mapping
                 val keys = json.keys()
                 while (keys.hasNext()) {
                     val key = keys.next()
@@ -100,7 +98,6 @@ class DistilGPTEngine(private val context: Context) {
             Log.d(TAG, "Loaded ${tokenizer?.size} tokens")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load tokenizer", e)
-            // Create fallback simple tokenizer
             createFallbackTokenizer()
         }
     }
@@ -109,12 +106,10 @@ class DistilGPTEngine(private val context: Context) {
         tokenizer = mutableMapOf()
         reverseTokenizer = mutableMapOf()
         
-        // Simple character-level fallback
         "abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-'\";:()[]{}".forEachIndexed { index, char ->
             (tokenizer as MutableMap)[char.toString()] = index
             (reverseTokenizer as MutableMap)[index] = char.toString()
         }
-        // Add special tokens
         (tokenizer as MutableMap)["[UNK]"] = tokenizer!!.size
         (tokenizer as MutableMap)["[CLS]"] = tokenizer!!.size
         (tokenizer as MutableMap)["[SEP]"] = tokenizer!!.size
@@ -132,24 +127,19 @@ class DistilGPTEngine(private val context: Context) {
     private fun encode(text: String): IntArray {
         if (tokenizer == null) return intArrayOf(0)
         
-        // Simple encoding - split by spaces and map to tokens
         val words = text.lowercase().split(Regex("\\s+"))
         val tokens = mutableListOf<Int>()
         
-        // Add [CLS] token if exists
         tokenizer?.get("[CLS]")?.let { tokens.add(it) }
         
         for (word in words) {
-            // Try whole word first
             var tokenId = tokenizer?.get(word)
             if (tokenId == null) {
-                // Try character by character for unknown words
                 for (char in word) {
                     tokenId = tokenizer?.get(char.toString())
                     if (tokenId != null) {
                         tokens.add(tokenId)
                     } else {
-                        // Unknown character
                         tokenizer?.get("[UNK]")?.let { tokens.add(it) }
                     }
                 }
@@ -185,27 +175,31 @@ class DistilGPTEngine(private val context: Context) {
             val inputTokens = encode(prompt)
             Log.d(TAG, "Encoded ${inputTokens.size} tokens")
             
-            // Prepare input tensor
+            // FIX 1: Convert Int to Long properly for shape array
             val inputShape = longArrayOf(1, inputTokens.size.toLong())
-            val inputBuffer = java.nio.IntBuffer.wrap(inputTokens)
             
-            // Create input array (adjust based on your model's expected input)
-            val inputArray = arrayOf(inputBuffer)
+            // FIX 2: Use correct tensor creation for TFLite
+            // Create input tensor as array of arrays (standard TFLite format)
+            val inputArray = arrayOf(
+                Array(1) { row ->
+                    FloatArray(inputTokens.size) { col ->
+                        inputTokens[col].toFloat()
+                    }
+                }
+            )
             
-            // Prepare output tensor
-            val outputShape = longArrayOf(1, inputTokens.size.toLong(), tokenizer?.size ?: 50000)
-            val outputBuffer = java.nio.FloatBuffer.allocate(1 * inputTokens.size * (tokenizer?.size ?: 50000))
-            val outputArray = arrayOf(outputBuffer)
+            // Prepare output array
+            val outputArray = arrayOf(
+                Array(1) { 
+                    FloatArray(tokenizer?.size ?: 50000) 
+                }
+            )
             
             // Run inference
-            interpreter?.runForMultipleInputsOutputs(inputArray, outputArray)
+            interpreter?.run(inputArray, outputArray)
             
-            // Get next token prediction (simplified - take highest probability)
-            val logits = FloatArray(tokenizer?.size ?: 50000)
-            outputBuffer.rewind()
-            outputBuffer.get(logits)
-            
-            // Find highest probability token (excluding special tokens)
+            // Get the predicted token (simplified)
+            val logits = outputArray[0][0]
             var maxIdx = 0
             var maxVal = logits[0]
             for (i in 1 until logits.size) {
@@ -215,7 +209,6 @@ class DistilGPTEngine(private val context: Context) {
                 }
             }
             
-            // Generate response (simplified - just return predicted token)
             val responseTokens = intArrayOf(maxIdx)
             val response = decode(responseTokens)
             
