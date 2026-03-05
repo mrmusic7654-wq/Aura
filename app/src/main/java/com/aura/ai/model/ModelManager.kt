@@ -82,7 +82,9 @@ class ModelManager(private val context: Context) {
         )
     }
     
-    fun close() {
-        gpt2Engine?.close()
+    // FIXED: Changed from close() to shutdown() to match GPT2Engine
+    fun shutdown() {
+        gpt2Engine?.shutdown()
+        gpt2Engine = null
     }
 }
