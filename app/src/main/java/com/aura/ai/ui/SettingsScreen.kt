@@ -2,10 +2,6 @@ package com.aura.ai.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Folder  // Correct import for the folder icon
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,7 +36,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Text("←") // Simple text back button instead of icon
                     }
                 }
             )
@@ -56,11 +52,7 @@ fun SettingsScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Model Information", style = MaterialTheme.typography.titleLarge)
-                        }
+                        Text("Model Information", style = MaterialTheme.typography.titleLarge)
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
@@ -83,12 +75,7 @@ fun SettingsScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Use the correctly imported Folder icon
-                            Icon(Icons.Default.Folder, contentDescription = "Storage Icon")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Storage", style = MaterialTheme.typography.titleLarge)
-                        }
+                        Text("Storage", style = MaterialTheme.typography.titleLarge)
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
@@ -101,7 +88,7 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            // Clear all conversations - implement if needed
+                            // Clear all conversations
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
