@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
 import com.aura.ai.data.Conversation
-import com.aura.ai.model.DistilGPTEngine
 import com.aura.ai.automation.CommandExecutor
 import com.aura.ai.utils.Constants
 import com.aura.ai.utils.FileHelper
@@ -20,7 +19,6 @@ class MainViewModel(
     
     private val TAG = "MainViewModel"
     private val chatDao = app.database.chatDao()
-    private val inferenceEngine = DistilGPTEngine(app)
     private val commandExecutor = CommandExecutor(app, app.deviceController)
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
@@ -45,23 +43,19 @@ class MainViewModel(
         try {
             Log.d(TAG, "Initializing model...")
             
-            val modelFound = app.modelManager.scanForModel()
+            val modelLoaded = app.modelManager.scanForModel()
+            _isModelReady.value = modelLoaded
             
-            if (modelFound) {
-                val initialized = inferenceEngine.initialize()
-                _isModelReady.value = initialized
-                
-                if (initialized) {
-                    Log.d(TAG, "✅ Model ready")
-                    val systemMessage = ChatMessage(
-                        conversationId = currentConversationId,
-                        content = "✅ Aura AI is ready!",
-                        isUser = false
-                    )
-                    chatDao.insertMessage(systemMessage)
-                }
+            if (modelLoaded) {
+                Log.d(TAG, "✅ Model ready")
+                val systemMessage = ChatMessage(
+                    conversationId = currentConversationId,
+                    content = "✅ Aura AI is ready with DistilGPT2!",
+                    isUser = false
+                )
+                chatDao.insertMessage(systemMessage)
             } else {
-                showErrorMessage("No model found. Place .tflite and tokenizer.json in:\n${FileHelper.getExternalDisplayPath(app)}")
+                showErrorMessage("Place model.tflite and vocab.json in:\n${FileHelper.getExternalDisplayPath(app)}")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error", e)
@@ -99,14 +93,8 @@ class MainViewModel(
             _isTyping.value = true
             
             try {
-                val isCommand = Constants.APP_OPEN_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-                                Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-                                Constants.HOME_COMMANDS.any { content.contains(it, ignoreCase = true) }
-                
-                val response = if (isCommand) {
-                    commandExecutor.executeCommand(content)
-                } else if (_isModelReady.value) {
-                    inferenceEngine.generateResponse(content)
+                val response = if (_isModelReady.value) {
+                    app.modelManager.generateText(content)
                 } else {
                     "Model not ready. Please check your files."
                 }
@@ -114,9 +102,7 @@ class MainViewModel(
                 val aiMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = response,
-                    isUser = false,
-                    isCommand = isCommand,
-                    commandExecuted = isCommand
+                    isUser = false
                 )
                 chatDao.insertMessage(aiMessage)
                 
@@ -134,16 +120,9 @@ class MainViewModel(
         }
     }
     
-    fun clearConversation() {
-        viewModelScope.launch {
-            chatDao.deleteConversationMessages(currentConversationId)
-            createNewConversation()
-        }
-    }
-    
     override fun onCleared() {
         super.onCleared()
-        inferenceEngine.shutdown()
+        app.modelManager.close()
     }
 }
 
