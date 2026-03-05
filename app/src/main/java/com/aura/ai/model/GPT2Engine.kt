@@ -50,13 +50,19 @@ class GPT2Engine(private val context: Context) {
     }
     
     fun generate(prompt: String, maxLength: Int = 30): String {
-        if (!_isInitialized || interpreter == null || tokenizer == null) {
+        // Check if interpreter exists and is not closed
+        if (!_isInitialized || interpreter == null) {
             return "Model not ready"
         }
         
         try {
+            Log.d(TAG, "Generating for: $prompt")
+            
             // Tokenize input
             val inputIds = tokenizer!!.encode(prompt)
+            if (inputIds.isEmpty()) {
+                return "No tokens generated"
+            }
             
             // Prepare input tensor [1, sequence_length]
             val inputArray = Array(1) { FloatArray(inputIds.size) }
@@ -64,8 +70,8 @@ class GPT2Engine(private val context: Context) {
                 inputArray[0][i] = inputIds[i].toFloat()
             }
             
-            // Prepare output tensor
-            val outputArray = Array(1) { FloatArray(50257) } // GPT-2 vocab size
+            // Prepare output tensor (vocab size 50257 for GPT-2)
+            val outputArray = Array(1) { FloatArray(50257) }
             
             // Run inference
             interpreter!!.run(inputArray, outputArray)
@@ -74,7 +80,9 @@ class GPT2Engine(private val context: Context) {
             val nextTokenId = argMax(outputArray[0])
             
             // Decode
-            return tokenizer!!.decode(intArrayOf(nextTokenId))
+            val result = tokenizer!!.decode(intArrayOf(nextTokenId))
+            Log.d(TAG, "Generated: $result")
+            return result
             
         } catch (e: Exception) {
             Log.e(TAG, "Generation failed", e)
@@ -94,7 +102,11 @@ class GPT2Engine(private val context: Context) {
         return maxIdx
     }
     
-    fun close() {
+    // REMOVED close() method - keep interpreter alive!
+    // Only close when app is destroyed
+    fun shutdown() {
+        // Only called when ViewModel clears
         interpreter?.close()
+        interpreter = null
     }
 }
