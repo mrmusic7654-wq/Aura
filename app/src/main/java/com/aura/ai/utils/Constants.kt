@@ -6,9 +6,6 @@ object Constants {
     const val APP_NAME = "Aura AI"
     const val AURA_DIR = "AuraAI"
     const val MODELS_DIR = "models"
-    const val TOKENIZER_DIR = "tokenizer"
-    const val CHAT_HISTORY_FILE = "chat_history.json"
-    const val EXPORT_DIR = "exports"
     
     // Model configuration
     const val MAX_SEQUENCE_LENGTH = 1024
@@ -17,9 +14,10 @@ object Constants {
     const val TOP_P = 0.9f
     const val TOP_K = 50
     
+    // Permissions
     val REQUIRED_PERMISSIONS = arrayOf(
-        android.Manifest.permission.READ_EXTERNAL_STORAGE,
-        android.Manifest.permission.POST_NOTIFICATIONS
+        Manifest.permission.READ_EXTERNAL_STORAGE,
+        Manifest.permission.POST_NOTIFICATIONS
     )
     
     // Command keywords for automation
@@ -31,7 +29,7 @@ object Constants {
     val BACK_COMMANDS = listOf("back", "go back", "previous")
     val HOME_COMMANDS = listOf("home", "go home", "main screen")
     
-    // Common app packages
+    // Common app packages for quick launch
     val COMMON_APP_PACKAGES = mapOf(
         "chrome" to "com.android.chrome",
         "youtube" to "com.google.android.youtube",
