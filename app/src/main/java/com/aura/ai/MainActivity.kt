@@ -36,18 +36,8 @@ class MainActivity : ComponentActivity() {
         val allGranted = permissions.values.all { it }
         if (allGranted) {
             showToast("All permissions granted")
-            checkStoragePermission()
         } else {
             showToast("Some permissions were denied")
-        }
-    }
-    
-    private val manageStorageLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        lifecycleScope.launch {
-            delay(1000)
-            checkModelAndProceed()
         }
     }
     
@@ -56,7 +46,7 @@ class MainActivity : ComponentActivity() {
         
         lifecycleScope.launch {
             FileHelper.createAuraDirectory(this@MainActivity)
-            checkPermissions()
+            permissionHelper.requestPermissions(requestPermissionLauncher)
         }
         
         setContent {
@@ -70,41 +60,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
-    private fun checkPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                requestManageStorage()
-            } else {
-                permissionHelper.requestPermissions(requestPermissionLauncher)
-            }
-        } else {
-            permissionHelper.requestPermissions(requestPermissionLauncher)
-        }
-    }
-    
-    private fun requestManageStorage() {
-        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
-        intent.data = Uri.parse("package:$packageName")
-        manageStorageLauncher.launch(intent)
-    }
-    
-    private fun checkStoragePermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                requestManageStorage()
-            }
-        }
-    }
-    
-    private suspend fun checkModelAndProceed() {
-        val isReady = FileHelper.isModelReady(this@MainActivity)
-        if (isReady) {
-            showToast("✅ Model loaded successfully!")
-        } else {
-            showToast("⚠️ Models not found. Please download or add model files.")
-        }
-    }
 }
 
 @Composable
@@ -115,11 +70,7 @@ fun AuraApp() {
     
     LaunchedEffect(Unit) {
         delay(2000)
-        val isModelReady = FileHelper.isModelReady(context)
-        startDestination = when {
-            isModelReady -> "chat"
-            else -> "model_setup"
-        }
+        startDestination = if (FileHelper.isModelReady(context)) "chat" else "model_setup"
     }
     
     NavHost(
@@ -144,26 +95,11 @@ fun AuraApp() {
         
         composable("model_setup") {
             ModelSetupScreen(
-                onScanPressed = {
+                onModelLoaded = {
                     navController.navigate("chat") {
                         popUpTo("model_setup") { inclusive = true }
                     }
-                },
-                onDownloadPressed = {
-                    navController.navigate("download")
                 }
-            )
-        }
-        
-        composable("download") {
-            // ⬇️ FIXED: Removed the non-existent onBackPressed parameter
-            DownloadScreen(
-                onDownloadComplete = {
-                    navController.navigate("chat") {
-                        popUpTo("download") { inclusive = true }
-                    }
-                }
-                // The onBackPressed parameter has been removed
             )
         }
         
@@ -171,9 +107,6 @@ fun AuraApp() {
             ChatScreen(
                 onNavigateToSettings = {
                     navController.navigate("settings")
-                },
-                onNavigateToConversations = {
-                    navController.navigate("conversations")
                 }
             )
         }
@@ -187,17 +120,6 @@ fun AuraApp() {
                     navController.navigate("model_setup") {
                         popUpTo("chat") { inclusive = false }
                     }
-                }
-            )
-        }
-        
-        composable("conversations") {
-            ConversationsScreen(
-                onConversationSelected = { conversationId ->
-                    navController.popBackStack()
-                },
-                onBackPressed = {
-                    navController.popBackStack()
                 }
             )
         }
