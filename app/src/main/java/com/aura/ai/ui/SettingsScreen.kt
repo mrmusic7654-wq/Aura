@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Storage  // This import is critical
+import androidx.compose.material.icons.filled.Folder  // CHANGED: Storage doesn't exist, using Folder instead
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -84,7 +84,7 @@ fun SettingsScreen(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Storage, contentDescription = null)  // This uses the import
+                            Icon(Icons.Default.Folder, contentDescription = null)  // CHANGED: Using Folder icon
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Storage", style = MaterialTheme.typography.titleLarge)
                         }
