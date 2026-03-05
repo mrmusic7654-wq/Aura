@@ -5,7 +5,6 @@ import android.util.Log
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.io.File
 
 class ModelManager(private val context: Context) {
     
@@ -21,29 +20,40 @@ class ModelManager(private val context: Context) {
     fun scanForModel(): Boolean {
         val modelsDir = FileHelper.getModelsDirectory(context)
         
-        Log.d("ModelManager", "Scanning for models in: ${modelsDir.absolutePath}")
+        Log.d("ModelManager", "Scanning: ${modelsDir.absolutePath}")
         
         if (!modelsDir.exists()) {
-            Log.d("ModelManager", "Models directory doesn't exist")
+            Log.e("ModelManager", "Directory missing")
             return false
         }
         
-        // Look for .tflite files
-        val tfliteFiles = modelsDir.listFiles { file -> 
-            file.extension.equals("tflite", ignoreCase = true) 
+        val files = modelsDir.listFiles() ?: return false
+        
+        var modelFile: java.io.File? = null
+        var tokenizerFile: java.io.File? = null
+        
+        files.forEach { file ->
+            when {
+                file.extension.equals("tflite", ignoreCase = true) -> {
+                    modelFile = file
+                    Log.d("ModelManager", "Found model: ${file.name}")
+                }
+                file.extension.equals("json", ignoreCase = true) -> {
+                    tokenizerFile = file
+                    Log.d("ModelManager", "Found tokenizer: ${file.name}")
+                }
+            }
         }
         
-        val modelFile = tfliteFiles?.firstOrNull()
-        
-        return if (modelFile != null && modelFile.exists()) {
-            _modelPath.value = modelFile.absolutePath
-            _modelName.value = modelFile.nameWithoutExtension
+        return if (modelFile != null && tokenizerFile != null) {
+            _modelPath.value = modelFile!!.absolutePath
+            _modelName.value = modelFile!!.nameWithoutExtension
             _isModelLoaded.value = true
-            Log.d("ModelManager", "✅ Found TFLite model: ${modelFile.name}")
+            Log.d("ModelManager", "✅ Both files found in same folder")
             true
         } else {
             _isModelLoaded.value = false
-            Log.d("ModelManager", "❌ No TFLite model found")
+            Log.e("ModelManager", "❌ Missing files. Need .tflite and .json in /models/")
             false
         }
     }
@@ -52,8 +62,7 @@ class ModelManager(private val context: Context) {
         return mapOf(
             "isLoaded" to _isModelLoaded.value,
             "modelName" to _modelName.value,
-            "modelPath" to (_modelPath.value ?: "Not found"),
-            "modelSizeMB" to (File(_modelPath.value ?: "").length() / (1024 * 1024))
+            "modelPath" to (_modelPath.value ?: "Not found")
         )
     }
 }
