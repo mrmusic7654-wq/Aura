@@ -33,34 +33,50 @@ object FileHelper {
     
     fun isModelReady(context: Context): Boolean {
         val modelsDir = getModelsDirectory(context)
-        if (!modelsDir.exists()) return false
         
-        val files = modelsDir.listFiles() ?: return false
+        Log.d(TAG, "Checking: ${modelsDir.absolutePath}")
         
+        if (!modelsDir.exists()) {
+            Log.e(TAG, "Directory missing")
+            return false
+        }
+        
+        val files = modelsDir.listFiles()
+        Log.d(TAG, "Files found: ${files?.size ?: 0}")
+        
+        // FORCE DETECTION - Look for ANY .tflite and ANY .json file
         var hasModel = false
-        var hasTokenizer = false
+        var hasVocab = false
         
-        files.forEach { file ->
-            when {
-                file.extension.equals("tflite", ignoreCase = true) -> hasModel = true
-                file.extension.equals("json", ignoreCase = true) -> hasTokenizer = true
+        files?.forEach { file ->
+            Log.d(TAG, "  Found: ${file.name}")
+            if (file.name.endsWith(".tflite", ignoreCase = true)) {
+                hasModel = true
+                Log.d(TAG, "  ✅ Model file recognized")
+            }
+            if (file.name.endsWith(".json", ignoreCase = true)) {
+                hasVocab = true
+                Log.d(TAG, "  ✅ Vocab file recognized")
             }
         }
         
-        return hasModel && hasTokenizer
+        // If we have at least one of each type, consider it ready
+        val ready = hasModel && hasVocab
+        Log.d(TAG, "Model ready: $ready")
+        return ready
     }
     
     fun getModelFile(context: Context): File? {
         val modelsDir = getModelsDirectory(context)
         return modelsDir.listFiles()?.firstOrNull { 
-            it.extension.equals("tflite", ignoreCase = true) 
+            it.name.endsWith(".tflite", ignoreCase = true)
         }
     }
     
     fun getTokenizerFile(context: Context): File? {
         val modelsDir = getModelsDirectory(context)
         return modelsDir.listFiles()?.firstOrNull { 
-            it.extension.equals("json", ignoreCase = true) 
+            it.name.endsWith(".json", ignoreCase = true)
         }
     }
     
