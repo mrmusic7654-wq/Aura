@@ -1,5 +1,8 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("kotlin-kapt")  // ← This is where kapt belongs
+    id("com.android.application") version "8.1.4" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.20" apply false
+}
+
+tasks.register("clean", Delete::class) {
+    delete(rootProject.buildDir)
 }
