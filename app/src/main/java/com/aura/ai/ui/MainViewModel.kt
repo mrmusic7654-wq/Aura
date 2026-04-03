@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.aura.ai.AuraApplication
 import com.aura.ai.data.ChatMessage
 import com.aura.ai.data.Conversation
-import com.aura.ai.automation.CommandExecutor
-import com.aura.ai.utils.Constants
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,7 +17,6 @@ class MainViewModel(
     
     private val TAG = "MainViewModel"
     private val chatDao = app.database.chatDao()
-    private val commandExecutor = CommandExecutor(app, app.deviceController)
     
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -45,7 +42,6 @@ class MainViewModel(
     private suspend fun createNewConversation() {
         val conversation = Conversation(title = "New Chat")
         currentConversationId = chatDao.insertConversation(conversation)
-        
         chatDao.getMessagesForConversation(currentConversationId).collect { msgs ->
             _messages.value = msgs
         }
@@ -53,25 +49,24 @@ class MainViewModel(
     
     private suspend fun initializeModel() {
         try {
-            Log.d(TAG, "Initializing model...")
-            
-            val modelLoaded = app.modelManager.scanForModel()
-            _isModelReady.value = modelLoaded
-            _modelName.value = app.modelManager.modelName.value
-            
-            if (modelLoaded) {
-                Log.d(TAG, "✅ Model ready: ${_modelName.value}")
-                val systemMessage = ChatMessage(
-                    conversationId = currentConversationId,
-                    content = "✅ Aura AI is ready with ${_modelName.value}!",
-                    isUser = false
-                )
-                chatDao.insertMessage(systemMessage)
+            val modelFound = app.modelManager.scanForModel()
+            if (modelFound) {
+                _modelName.value = app.modelManager.modelName.value
+                val loaded = app.modelManager.loadModel(_modelName.value + ".gguf")
+                _isModelReady.value = loaded
+                if (loaded) {
+                    val systemMessage = ChatMessage(
+                        conversationId = currentConversationId,
+                        content = "✅ Aura AI ready with ${_modelName.value}",
+                        isUser = false
+                    )
+                    chatDao.insertMessage(systemMessage)
+                }
             } else {
-                showErrorMessage("Place model.tflite and vocab.json in:\n${FileHelper.getExternalDisplayPath(app)}")
+                showErrorMessage("Place .gguf file in:\n${FileHelper.getExternalDisplayPath(app)}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error initializing model", e)
+            Log.e(TAG, "Error", e)
             showErrorMessage("Error: ${e.message}")
         }
     }
@@ -93,38 +88,23 @@ class MainViewModel(
                 isUser = true
             )
             chatDao.insertMessage(userMessage)
-            
             _isTyping.value = true
             
             try {
-                val isCommand = isCommand(content)
-                
-                val response = if (isCommand) {
-                    commandExecutor.executeCommand(content)
-                } else if (_isModelReady.value) {
-                    app.modelManager.generateText(content)
+                val response = if (_isModelReady.value) {
+                    app.modelManager.executeCommand(content)
                 } else {
-                    "Model not ready. Please check your files in:\n${FileHelper.getExternalDisplayPath(app)}"
+                    "Model not ready. Place .gguf file in:\n${FileHelper.getExternalDisplayPath(app)}"
                 }
                 
                 val aiMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = response,
-                    isUser = false,
-                    isCommand = isCommand,
-                    commandExecuted = isCommand
+                    isUser = false
                 )
                 chatDao.insertMessage(aiMessage)
-                
-                if (_messages.value.size <= 2) {
-                    val newTitle = content.take(30) + if (content.length > 30) "..." else ""
-                    chatDao.getConversation(currentConversationId)?.let { conv ->
-                        chatDao.updateConversation(conv.copy(title = newTitle))
-                    }
-                }
-                
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing message", e)
+                Log.e(TAG, "Error", e)
                 val errorMessage = ChatMessage(
                     conversationId = currentConversationId,
                     content = "❌ Error: ${e.message}",
@@ -137,25 +117,8 @@ class MainViewModel(
         }
     }
     
-    private fun isCommand(content: String): Boolean {
-        return Constants.APP_OPEN_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.SCROLL_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.SEARCH_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.CLICK_COMMANDS.any { content.startsWith(it, ignoreCase = true) } ||
-               Constants.BACK_COMMANDS.any { content.contains(it, ignoreCase = true) } ||
-               Constants.HOME_COMMANDS.any { content.contains(it, ignoreCase = true) }
-    }
-    
-    fun clearConversation() {
-        viewModelScope.launch {
-            chatDao.deleteConversationMessages(currentConversationId)
-            createNewConversation()
-        }
-    }
-    
     override fun onCleared() {
         super.onCleared()
-        // FIXED: Changed from close() to shutdown()
         app.modelManager.shutdown()
     }
 }
