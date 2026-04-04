@@ -2,29 +2,31 @@ package com.aura.ai.model
 
 import android.content.Context
 import android.util.Log
-import androidx.lifecycle.LifecycleCoroutineScope
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 
-class ModelManager(
-    private val context: Context,
-    private val lifecycleScope: LifecycleCoroutineScope
-) {
+class ModelManager(private val context: Context) {
     
     private val TAG = "ModelManager"
     
     private val _isModelLoaded = MutableStateFlow(false)
     val isModelLoaded: StateFlow<Boolean> = _isModelLoaded
     
+    private val _modelPath = MutableStateFlow<String?>(null)
+    val modelPath: StateFlow<String?> = _modelPath
+    
     private val _modelName = MutableStateFlow("")
     val modelName: StateFlow<String> = _modelName
     
-    private var functionGemmaEngine: FunctionGemmaEngine? = null
-    
     fun scanForModel(): Boolean {
         val modelsDir = FileHelper.getModelsDirectory(context)
+        
+        Log.d(TAG, "Scanning for models in: ${modelsDir.absolutePath}")
+        
         if (!modelsDir.exists()) {
+            Log.e(TAG, "Models directory missing")
             modelsDir.mkdirs()
             return false
         }
@@ -35,36 +37,24 @@ class ModelManager(
         
         val modelFile = ggufFiles?.firstOrNull()
         
-        return if (modelFile != null) {
+        return if (modelFile != null && modelFile.exists()) {
+            _modelPath.value = modelFile.absolutePath
             _modelName.value = modelFile.nameWithoutExtension
-            Log.d(TAG, "✅ Found: ${modelFile.name}")
+            _isModelLoaded.value = true
+            Log.d(TAG, "✅ Found GGUF model: ${modelFile.name}")
             true
         } else {
+            _isModelLoaded.value = false
+            Log.e(TAG, "❌ No GGUF model found")
             false
         }
-    }
-    
-    suspend fun loadModel(modelFileName: String): Boolean {
-        functionGemmaEngine = FunctionGemmaEngine(context, lifecycleScope)
-        val success = functionGemmaEngine?.loadModel(modelFileName) == true
-        _isModelLoaded.value = success
-        return success
-    }
-    
-    suspend fun executeCommand(command: String): String {
-        return functionGemmaEngine?.executeCommand(command) ?: "Engine not initialized"
     }
     
     fun getModelInfo(): Map<String, Any> {
         return mapOf(
             "isLoaded" to _isModelLoaded.value,
-            "modelName" to _modelName.value
+            "modelName" to _modelName.value,
+            "modelPath" to (_modelPath.value ?: "Not found")
         )
-    }
-    
-    fun shutdown() {
-        functionGemmaEngine?.shutdown()
-        functionGemmaEngine = null
-        _isModelLoaded.value = false
     }
 }
