@@ -54,8 +54,8 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.0")
     kapt("androidx.room:room-compiler:2.6.0")
     
-    // Try llmedge with v prefix
-    implementation("com.github.Aatricks:llmedge:v0.1.0")
+    // LLMedge - CORRECT VERSION (without V prefix)
+    implementation("com.github.Aatricks:llmedge:0.3.7")
     
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
