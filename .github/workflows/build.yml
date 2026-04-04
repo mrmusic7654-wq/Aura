@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        # Remove submodules: 'recursive' line
       
       - name: Clone llmedge
         run: |
@@ -29,6 +28,9 @@ jobs:
       
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       
       - name: Build with Gradle
         run: ./gradlew assembleDebug
