@@ -50,12 +50,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     
-    // Room
     implementation("androidx.room:room-runtime:2.6.0")
     kapt("androidx.room:room-compiler:2.6.0")
     
-    // Try Maven Central format
-    implementation("io.github.Aatricks:llmedge:0.3.7")
+    // llmedge as a module (not a remote dependency)
+    implementation(project(":llmedge"))
     
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("org.jetbrains.kotlinx:koroutines-android:1.7.3")
 }
