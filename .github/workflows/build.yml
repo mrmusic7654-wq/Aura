@@ -1,33 +1,41 @@
-name: Build AuraAI APK
+name: Build Aura AI
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v4
-
+        with:
+          submodules: 'recursive'
+      
+      - name: Clone llmedge
+        run: |
+          git clone --depth=1 https://github.com/Aatricks/llmedge.git
+          cd llmedge
+          git submodule update --init --recursive
+          cd ..
+      
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Debug APK
+          distribution: 'temurin'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Build with Gradle
         run: ./gradlew assembleDebug
-
-      - name: Upload APK artifact
+      
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AuraAI-debug-apk
+          name: aura-debug
           path: app/build/outputs/apk/debug/app-debug.apk
