@@ -43,7 +43,7 @@ fun ModelSetupScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Place both files in this folder:",
+            "Place your GGUF model file in:",
             style = MaterialTheme.typography.bodyLarge
         )
         
@@ -71,12 +71,13 @@ fun ModelSetupScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    "Required Files in same folder:",
+                    "Required:",
                     style = MaterialTheme.typography.titleSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("• model.tflite (your model file)")
-                Text("• tokenizer.json (tokenizer file)")
+                Text("• Any .gguf model file")
+                Text("• No tokenizer needed - GGUF includes it")
+                Text("• FunctionGemma 270M recommended")
             }
         }
         
@@ -94,15 +95,15 @@ fun ModelSetupScreen(
             onClick = {
                 scope.launch {
                     isScanning = true
-                    statusMessage = "Scanning..."
+                    statusMessage = "Scanning for GGUF files..."
                     delay(1000)
                     
                     if (FileHelper.isModelReady(context)) {
-                        statusMessage = "✅ Files found! Loading..."
+                        statusMessage = "✅ GGUF model found! Loading..."
                         delay(500)
                         onModelLoaded()
                     } else {
-                        statusMessage = "❌ Missing files. Need both .tflite and .json"
+                        statusMessage = "❌ No .gguf file found. Place a GGUF model in the folder."
                     }
                     
                     isScanning = false
@@ -111,7 +112,7 @@ fun ModelSetupScreen(
             enabled = !isScanning,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isScanning) "Scanning..." else "Scan for Files")
+            Text(if (isScanning) "Scanning..." else "Scan for GGUF Models")
         }
     }
 }
