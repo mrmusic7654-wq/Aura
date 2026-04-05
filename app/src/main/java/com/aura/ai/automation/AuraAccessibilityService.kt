@@ -1,6 +1,8 @@
 package com.aura.ai.automation
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
 import android.view.accessibility.AccessibilityEvent
 
 class AuraAccessibilityService : AccessibilityService() {
@@ -19,7 +21,53 @@ class AuraAccessibilityService : AccessibilityService() {
     }
     
     override fun onInterrupt() {
-        instance = null
+        // Service interrupted
+    }
+    
+    fun performClick(x: Float, y: Float) {
+        val path = Path()
+        path.moveTo(x, y)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
+            .build()
+        dispatchGesture(gesture, null, null)
+    }
+    
+    fun performSwipe(fromX: Float, fromY: Float, toX: Float, toY: Float) {
+        val path = Path()
+        path.moveTo(fromX, fromY)
+        path.lineTo(toX, toY)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
+            .build()
+        dispatchGesture(gesture, null, null)
+    }
+    
+    fun performScroll(direction: String) {
+        val displayWidth = resources.displayMetrics.widthPixels
+        val displayHeight = resources.displayMetrics.heightPixels
+        
+        val (startX, startY, endX, endY) = when (direction.lowercase()) {
+            "up" -> Pair(displayWidth / 2f, displayHeight * 0.7f, displayWidth / 2f, displayHeight * 0.3f)
+            "down" -> Pair(displayWidth / 2f, displayHeight * 0.3f, displayWidth / 2f, displayHeight * 0.7f)
+            else -> return
+        }
+        
+        val path = Path()
+        path.moveTo(startX, startY)
+        path.lineTo(endX, endY)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 500))
+            .build()
+        dispatchGesture(gesture, null, null)
+    }
+    
+    fun performBack(): Boolean {
+        return performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+    
+    fun performHome(): Boolean {
+        return performGlobalAction(GLOBAL_ACTION_HOME)
     }
     
     override fun onDestroy() {
