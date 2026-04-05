@@ -36,8 +36,18 @@ class MainActivity : ComponentActivity() {
         val allGranted = permissions.values.all { it }
         if (allGranted) {
             showToast("All permissions granted")
+            checkStoragePermission()
         } else {
-            showToast("Some permissions were denied")
+            showToast("Some permissions were denied. App may not work properly.")
+        }
+    }
+    
+    private val manageStorageLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        lifecycleScope.launch {
+            delay(1000)
+            checkModelAndProceed()
         }
     }
     
@@ -46,7 +56,7 @@ class MainActivity : ComponentActivity() {
         
         lifecycleScope.launch {
             FileHelper.createAuraDirectory(this@MainActivity)
-            permissionHelper.requestPermissions(requestPermissionLauncher)
+            checkPermissions()
         }
         
         setContent {
@@ -60,6 +70,42 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    
+    private fun checkPermissions() {
+        // For Android 11+, request MANAGE_EXTERNAL_STORAGE first
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                requestManageStorage()
+            } else {
+                permissionHelper.requestPermissions(requestPermissionLauncher)
+            }
+        } else {
+            permissionHelper.requestPermissions(requestPermissionLauncher)
+        }
+    }
+    
+    private fun requestManageStorage() {
+        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+        intent.data = Uri.parse("package:$packageName")
+        manageStorageLauncher.launch(intent)
+    }
+    
+    private fun checkStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                requestManageStorage()
+            }
+        }
+    }
+    
+    private suspend fun checkModelAndProceed() {
+        val isReady = FileHelper.isModelReady(this@MainActivity)
+        if (isReady) {
+            showToast("✅ Model loaded successfully!")
+        } else {
+            showToast("⚠️ Models not found. Please place .gguf file in the models folder.")
+        }
+    }
 }
 
 @Composable
@@ -70,7 +116,8 @@ fun AuraApp() {
     
     LaunchedEffect(Unit) {
         delay(2000)
-        startDestination = if (FileHelper.isModelReady(context)) "chat" else "model_setup"
+        val isModelReady = FileHelper.isModelReady(context)
+        startDestination = if (isModelReady) "chat" else "model_setup"
     }
     
     NavHost(
@@ -107,6 +154,9 @@ fun AuraApp() {
             ChatScreen(
                 onNavigateToSettings = {
                     navController.navigate("settings")
+                },
+                onNavigateToConversations = {
+                    navController.navigate("conversations")
                 }
             )
         }
@@ -120,6 +170,17 @@ fun AuraApp() {
                     navController.navigate("model_setup") {
                         popUpTo("chat") { inclusive = false }
                     }
+                }
+            )
+        }
+        
+        composable("conversations") {
+            ConversationsScreen(
+                onConversationSelected = { conversationId ->
+                    navController.popBackStack()
+                },
+                onBackPressed = {
+                    navController.popBackStack()
                 }
             )
         }
