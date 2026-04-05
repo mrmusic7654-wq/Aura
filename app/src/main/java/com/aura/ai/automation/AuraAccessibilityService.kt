@@ -47,9 +47,20 @@ class AuraAccessibilityService : AccessibilityService() {
         val displayWidth = resources.displayMetrics.widthPixels
         val displayHeight = resources.displayMetrics.heightPixels
         
-        val (startX, startY, endX, endY) = when (direction.lowercase()) {
-            "up" -> Pair(displayWidth / 2f, displayHeight * 0.7f, displayWidth / 2f, displayHeight * 0.3f)
-            "down" -> Pair(displayWidth / 2f, displayHeight * 0.3f, displayWidth / 2f, displayHeight * 0.7f)
+        val startX = displayWidth / 2f
+        val startY: Float
+        val endX = displayWidth / 2f
+        val endY: Float
+        
+        when (direction.lowercase()) {
+            "up" -> {
+                startY = displayHeight * 0.7f
+                endY = displayHeight * 0.3f
+            }
+            "down" -> {
+                startY = displayHeight * 0.3f
+                endY = displayHeight * 0.7f
+            }
             else -> return
         }
         
