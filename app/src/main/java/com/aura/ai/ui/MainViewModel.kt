@@ -109,8 +109,8 @@ class MainViewModel(
             
             try {
                 val response = if (_isModelReady.value && llmInference != null) {
-                    // ACTUAL AI GENERATION
-                    llmInference?.generate(content) ?: "No response"
+                    // ACTUAL AI GENERATION - using generateResponse
+                    llmInference?.generateResponse(content) ?: "No response"
                 } else {
                     "Model not ready. Place a .gguf file in:\n${FileHelper.getExternalDisplayPath(app)}"
                 }
