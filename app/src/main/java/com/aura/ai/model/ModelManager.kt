@@ -5,7 +5,6 @@ import android.util.Log
 import com.aura.ai.utils.FileHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.io.File
 
 class ModelManager(private val context: Context) {
     
@@ -23,7 +22,7 @@ class ModelManager(private val context: Context) {
     fun scanForModel(): Boolean {
         val modelsDir = FileHelper.getModelsDirectory(context)
         
-        Log.d(TAG, "Scanning for models in: ${modelsDir.absolutePath}")
+        Log.d(TAG, "Scanning for GGUF models in: ${modelsDir.absolutePath}")
         
         if (!modelsDir.exists()) {
             Log.e(TAG, "Models directory missing")
