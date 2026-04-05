@@ -23,7 +23,7 @@ object FileHelper {
             if (!auraDir.exists()) auraDir.mkdirs()
             if (!modelsDir.exists()) modelsDir.mkdirs()
             
-            Log.d(TAG, "Directory created: ${modelsDir.absolutePath}")
+            Log.d(TAG, "Directories created at: ${modelsDir.absolutePath}")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error creating directories", e)
@@ -34,49 +34,22 @@ object FileHelper {
     fun isModelReady(context: Context): Boolean {
         val modelsDir = getModelsDirectory(context)
         
-        Log.d(TAG, "Checking: ${modelsDir.absolutePath}")
+        if (!modelsDir.exists()) return false
         
-        if (!modelsDir.exists()) {
-            Log.e(TAG, "Directory missing")
-            return false
+        // Look for .gguf files (GGUF format)
+        val ggufFiles = modelsDir.listFiles { file -> 
+            file.extension.equals("gguf", ignoreCase = true) 
         }
         
-        val files = modelsDir.listFiles()
-        Log.d(TAG, "Files found: ${files?.size ?: 0}")
-        
-        // FORCE DETECTION - Look for ANY .tflite and ANY .json file
-        var hasModel = false
-        var hasVocab = false
-        
-        files?.forEach { file ->
-            Log.d(TAG, "  Found: ${file.name}")
-            if (file.name.endsWith(".tflite", ignoreCase = true)) {
-                hasModel = true
-                Log.d(TAG, "  ✅ Model file recognized")
-            }
-            if (file.name.endsWith(".json", ignoreCase = true)) {
-                hasVocab = true
-                Log.d(TAG, "  ✅ Vocab file recognized")
-            }
-        }
-        
-        // If we have at least one of each type, consider it ready
-        val ready = hasModel && hasVocab
-        Log.d(TAG, "Model ready: $ready")
-        return ready
+        val hasModel = !ggufFiles.isNullOrEmpty()
+        Log.d(TAG, "GGUF model found: $hasModel")
+        return hasModel
     }
     
     fun getModelFile(context: Context): File? {
         val modelsDir = getModelsDirectory(context)
         return modelsDir.listFiles()?.firstOrNull { 
-            it.name.endsWith(".tflite", ignoreCase = true)
-        }
-    }
-    
-    fun getTokenizerFile(context: Context): File? {
-        val modelsDir = getModelsDirectory(context)
-        return modelsDir.listFiles()?.firstOrNull { 
-            it.name.endsWith(".json", ignoreCase = true)
+            it.extension.equals("gguf", ignoreCase = true) 
         }
     }
     
