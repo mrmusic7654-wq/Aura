@@ -5,14 +5,18 @@ import android.util.Log
 import java.io.File
 
 object FileHelper {
-    private const val TAG = "FileHelper"
+    private const val TAG = "AURA-DEBUG"
     
     fun getAuraDirectory(context: Context): File {
-        return File(context.getExternalFilesDir(null), "AuraAI")
+        val dir = File(context.getExternalFilesDir(null), "AuraAI")
+        Log.d(TAG, "getAuraDirectory: ${dir.absolutePath}")
+        return dir
     }
     
     fun getModelsDirectory(context: Context): File {
-        return File(getAuraDirectory(context), "models")
+        val dir = File(getAuraDirectory(context), "models")
+        Log.d(TAG, "getModelsDirectory: ${dir.absolutePath}")
+        return dir
     }
     
     fun createAuraDirectory(context: Context): Boolean {
@@ -20,10 +24,19 @@ object FileHelper {
             val auraDir = getAuraDirectory(context)
             val modelsDir = getModelsDirectory(context)
             
-            if (!auraDir.exists()) auraDir.mkdirs()
-            if (!modelsDir.exists()) modelsDir.mkdirs()
+            Log.d(TAG, "Creating directories...")
+            Log.d(TAG, "Aura dir: ${auraDir.absolutePath}")
+            Log.d(TAG, "Models dir: ${modelsDir.absolutePath}")
             
-            Log.d(TAG, "Directories created at: ${modelsDir.absolutePath}")
+            if (!auraDir.exists()) {
+                val created = auraDir.mkdirs()
+                Log.d(TAG, "Created Aura dir: $created")
+            }
+            if (!modelsDir.exists()) {
+                val created = modelsDir.mkdirs()
+                Log.d(TAG, "Created Models dir: $created")
+            }
+            
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error creating directories", e)
@@ -34,23 +47,53 @@ object FileHelper {
     fun isModelReady(context: Context): Boolean {
         val modelsDir = getModelsDirectory(context)
         
-        if (!modelsDir.exists()) return false
+        Log.d(TAG, "=== CHECKING MODEL ===")
+        Log.d(TAG, "Models dir: ${modelsDir.absolutePath}")
+        Log.d(TAG, "Directory exists: ${modelsDir.exists()}")
         
-        // Look for .gguf files (GGUF format)
-        val ggufFiles = modelsDir.listFiles { file -> 
-            file.extension.equals("gguf", ignoreCase = true) 
+        if (!modelsDir.exists()) {
+            Log.e(TAG, "❌ Directory does NOT exist!")
+            createAuraDirectory(context)
+            return false
         }
         
-        val hasModel = !ggufFiles.isNullOrEmpty()
-        Log.d(TAG, "GGUF model found: $hasModel")
+        val files = modelsDir.listFiles()
+        Log.d(TAG, "Number of files: ${files?.size ?: 0}")
+        
+        if (files == null || files.isEmpty()) {
+            Log.e(TAG, "❌ No files found in directory!")
+            return false
+        }
+        
+        files.forEach { file ->
+            Log.d(TAG, "  📄 Found: ${file.name} (${file.length()} bytes)")
+        }
+        
+        val ggufFiles = files.filter { 
+            it.extension.equals("gguf", ignoreCase = true) 
+        }
+        
+        Log.d(TAG, "GGUF files found: ${ggufFiles.size}")
+        
+        if (ggufFiles.isNotEmpty()) {
+            ggufFiles.forEach { file ->
+                Log.d(TAG, "  ✅ GGUF model: ${file.name}")
+            }
+        }
+        
+        val hasModel = ggufFiles.isNotEmpty()
+        Log.d(TAG, "Model ready: $hasModel")
+        Log.d(TAG, "=== END CHECK ===")
+        
         return hasModel
     }
     
     fun getModelFile(context: Context): File? {
         val modelsDir = getModelsDirectory(context)
-        return modelsDir.listFiles()?.firstOrNull { 
+        val ggufFiles = modelsDir.listFiles()?.filter { 
             it.extension.equals("gguf", ignoreCase = true) 
         }
+        return ggufFiles?.firstOrNull()
     }
     
     fun getModelName(context: Context): String {
